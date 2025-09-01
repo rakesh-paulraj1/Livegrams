@@ -15,9 +15,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "@prisma/client": "6.15.0",
     "prisma": "^6.15.0"
+  },
+  "prisma": {
+    "schema": "./prisma/schema.prisma"
   }
 }

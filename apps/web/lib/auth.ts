@@ -1,7 +1,6 @@
 import GoogleProvider from 'next-auth/providers/google';
 import { setCookie } from '../utils/setcookie';
-
-const prisma = new PrismaClient();
+import {prismaClient} from "@repo/db/client"
 
 // Validate required environment variables
 const requiredEnvVars = {
@@ -46,7 +45,7 @@ export const authentication = {
       }
 
       try {
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await prismaClient.user.findUnique({
           where: {
             email: session.user.email
           }
@@ -58,7 +57,7 @@ export const authentication = {
             localStorage.setItem('userId', existingUser.id.toString());
           }
         } else {
-          const newUser = await prisma.user.create({
+          const newUser = await prismaClient.user.create({
             data: {
               name: session.user.name,
               email: session.user.email,
