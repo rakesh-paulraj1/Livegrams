@@ -2,7 +2,7 @@
 import { signIn, signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 export default function Home() {
-   const { data: session, status } = useSession();
+   const { data: session,  } = useSession();
   return (
 
     <div >
@@ -11,11 +11,12 @@ export default function Home() {
   Signin
 </button>
     HI
-    {session?.user ? <>{session?.user?.name ?? "No user name found"}</>:<>
-    <button onClick={()=>signOut}>
+    {session?.user ? <>{session?.user?.name ?? "No user name found"}
+    <button onClick={()=>signOut({ callbackUrl: 'http://localhost:3000' })}>
       signout
     </button>
-
+</>:<>
+    
   <div>Not logged in</div>
     </>
     }

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       dotenv:
-        specifier: ^17.2.1
-        version: 17.2.1
+        specifier: ^17.2.2
+        version: 17.2.2
       drizzle-orm:
         specifier: ^0.44.5
         version: 0.44.5(@prisma/client@6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2))(@types/pg@8.15.5)(pg@8.16.3)(prisma@6.15.0(typescript@5.9.2))
@@ -104,6 +104,9 @@ importers:
       '@prisma/client':
         specifier: 6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
+      dotenv:
+        specifier: ^17.2.1
+        version: 17.2.1
       prisma:
         specifier: ^6.15.0
         version: 6.15.0(typescript@5.9.2)
@@ -783,8 +786,8 @@ packages:
   '@types/node@22.15.3':
     resolution: {integrity: sha512-lX7HFZeHf4QG/J7tBZqrCAXwz9J5RD56Y6MpP0eJkka8p+K0RY/yBTW7CYFJ4VGCclxqOLKmiGP5juQc6MKgcw==}
 
-  '@types/node@24.3.0':
-    resolution: {integrity: sha512-aPTXCrfwnDLj4VvXrm+UUCQjNEvJgNA8s5F1cvwQU+3KNltTOkBm1j30uNLyqqPNe7gE3KFzImYoZEfLhp4Yow==}
+  '@types/node@24.3.1':
+    resolution: {integrity: sha512-3vXmQDXy+woz+gnrTvuvNrPzekOi+Ds0ReMxw0LzBiK3a+1k0kQn9f2NWk+lgD4rJehFUmYy2gMhJ2ZI+7YP9g==}
 
   '@types/pg@8.15.5':
     resolution: {integrity: sha512-LF7lF6zWEKxuT3/OR8wAZGzkg4ENGXFNyiV/JeOt9z5B+0ZVwbql9McqX5c/WStFq1GaGso7H1AzP/qSzmlCKQ==}
@@ -1070,6 +1073,10 @@ packages:
 
   dotenv@17.2.1:
     resolution: {integrity: sha512-kQhDYKZecqnM0fCnzI5eIv5L4cAe/iRI+HqMbO/hbRdTAeXDG+M9FjipUxNfbARuEg4iHIbhnhs78BCHNbSxEQ==}
+    engines: {node: '>=12'}
+
+  dotenv@17.2.2:
+    resolution: {integrity: sha512-Sf2LSQP+bOlhKWWyhFsn0UsfdK/kCWRv1iuA2gXAwt3dyNabr6QSj00I2V10pidqz69soatm9ZwZvpQMTIOd5Q==}
     engines: {node: '>=12'}
 
   drizzle-kit@0.31.4:
@@ -2607,13 +2614,13 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/node@24.3.0':
+  '@types/node@24.3.1':
     dependencies:
       undici-types: 7.10.0
 
   '@types/pg@8.15.5':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 24.3.1
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
@@ -2962,6 +2969,8 @@ snapshots:
   dotenv@16.6.1: {}
 
   dotenv@17.2.1: {}
+
+  dotenv@17.2.2: {}
 
   drizzle-kit@0.31.4:
     dependencies:

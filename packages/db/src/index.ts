@@ -1,3 +1,4 @@
-import { PrismaClient } from "./generated/client.js"; // <-- use the local generated path
-
+// import { config } from "dotenv";
+import { PrismaClient } from "./generated/prisma/index.js";
+// config({ path: "../env" });
 export const prismaClient = new PrismaClient();

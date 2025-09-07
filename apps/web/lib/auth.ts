@@ -2,22 +2,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import { setCookie } from '../utils/setcookie';
 import {prismaClient} from "@repo/db/client"
 
-// Validate required environment variables
-const requiredEnvVars = {
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-};
 
-// Check for missing environment variables
-const missingVars = Object.entries(requiredEnvVars)
-  .filter(([_, value]) => !value)
-  .map(([key]) => key);
 
-if (missingVars.length > 0) {
-  console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  console.error('Please check your .env.local file and ensure all required variables are set.');
-}
 
 export const authentication = {
   providers: [
