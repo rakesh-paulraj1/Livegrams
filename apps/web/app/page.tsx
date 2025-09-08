@@ -5,14 +5,14 @@ export default function Home() {
    const { data: session,  } = useSession();
   return (
 
-    <div >
+    <div className="">
 
-<button onClick={() => signIn()}>
+<button className="p-3 bg-sky-500 hover:bg-sky-700" onClick={() => signIn()}>
   Signin
 </button>
     HI
     {session?.user ? <>{session?.user?.name ?? "No user name found"}
-    <button onClick={()=>signOut({ callbackUrl: 'http://localhost:3000' })}>
+    <button className="p-3 bg-sky-500 hover:bg-sky-700" onClick={()=>signOut({ callbackUrl: 'http://localhost:3000' })}>
       signout
     </button>
 </>:<>
