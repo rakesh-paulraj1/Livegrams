@@ -18,5 +18,26 @@ model User{
   id   String @id @default(uuid())
   email String @unique
   name String
+  rooms Room[] @relation("RoomAdmin")
+  shapes Shape[]
+}
+
+model Room{
+  id          Int       @id @default(autoincrement())
+  slug        String    @unique
+  createdAt   DateTime  @default(now())
+  adminId     String
+  admin       User      @relation("RoomAdmin", fields: [adminId], references: [id])
+  shapes      Shape[]
+}
+
+model Shape{
+  id        Int       @id @default(autoincrement())
+  roomId    Int
+  shapeData String    // JSON string containing the shape data
+  userId    String
+  createdAt DateTime  @default(now())
+  room      Room      @relation(fields: [roomId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 }
 
