@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prismaClient } from '@repo/db/client';
 import { getCookie } from '../../../../utils/setcookie';
+import { verifyToken, getTokenFromCookies } from '../../../../lib/jwt';
 
 // Validation schema for join room request
 const JoinRoomSchema = z.object({
@@ -20,12 +21,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Extract userId from cookies
-    const userId = getCookie(req, 'userId');
+    // Extract and verify JWT token
+    const token = getTokenFromCookies(req.headers.get('cookie'));
+    const userInfo = verifyToken(token);
     
-    if (!userId) {
+    if (!userInfo) {
       return NextResponse.json(
-        { message: "Unauthorized" },
+        { message: "Unauthorized - Invalid or expired token" },
         { status: 401 }
       );
     }

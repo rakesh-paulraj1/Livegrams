@@ -1,6 +1,7 @@
 "use client"
-import React from 'react';
+import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { 
   Sparkles, 
   Users, 
@@ -10,13 +11,154 @@ import {
   ArrowRight, 
   CheckCircle,
   Play,
-  Star
+  Star,
+  X,
+  Plus,
+  Hash
 } from 'lucide-react';
 
 
 function App() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [roomId, setRoomId] = useState('');
+  const [roomName, setRoomName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const router = useRouter();
+
+  const handleCreateRoom = async () => {
+    if (!roomName.trim()) return;
+    
+    try {
+      const response = await fetch('/api/server/joinroom', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          roomName: roomName.trim(),
+          action: 'create'
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        router.push(`/collab/${data.roomId}`);
+      } else {
+        alert(data.message || 'Failed to create room. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating room:', error);
+      alert('Network error. Please check your connection and try again.');
+    }
+  };
+
+  // const handleJoinRoom = async () => {
+  //   if (!roomId.trim()) return;
+    
+  //   try {
+  //     const response = await fetch('/api/server/joinroom', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         roomId: roomId.trim(),
+  //         action: 'join'
+  //       }),
+  //     });
+      
+  //     const data = await response.json();
+      
+  //     if (response.ok && data.success) {
+  //       router.push(`/collab/${data.roomId}`);
+  //     } else {
+  //       // Handle error cases
+  //       alert(data.message || 'Failed to join room. Please check the room ID and try again.');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error joining room:', error);
+  //     alert('Network error. Please check your connection and try again.');
+  //   }
+  // };
+
   return (
     <div className="min-h-screen bg-white">
+      {/* Room Selection Dialog */}
+      {isDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Choose Your Action</h2>
+              <button
+                onClick={() => setIsDialogOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Create Room Section */}
+              <div className="border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Create New Room</h3>
+                </div>
+                <p className="text-gray-600 text-sm mb-4">Start a new collaborative drawing session</p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Enter room name..."
+                    value={roomName}
+                    onChange={(e) => setRoomName(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={() => {
+                      setIsCreating(true);
+                      handleCreateRoom();
+                    }}
+                    disabled={!roomName.trim() || isCreating}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {isCreating ? 'Creating...' : 'Create Room'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Join Room Section */}
+              <div className="border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center mr-3">
+                    <Hash className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Join Existing Room</h3>
+                </div>
+                <p className="text-gray-600 text-sm mb-4">Enter a room ID to join an existing session</p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Enter room ID..."
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={handleJoinRoom}
+                    disabled={!roomId.trim()}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Join Room
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,7 +199,10 @@ function App() {
 
             {/* Main CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <button className="group bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center">
+              <button 
+                onClick={() => setIsDialogOpen(true)}
+                className="group bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center"
+              >
                 <Users className="w-5 h-5 mr-2" />
                 Create Room
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -132,7 +277,10 @@ function App() {
                   Export & share easily
                 </li>
               </ul>
-              <button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105">
+              <button 
+                onClick={() => setIsDialogOpen(true)}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105"
+              >
                 Start Collaborating
               </button>
             </div>
@@ -209,7 +357,10 @@ function App() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button className="group bg-white text-purple-900 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center">
+            <button 
+              onClick={() => setIsDialogOpen(true)}
+              className="group bg-white text-purple-900 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-50 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center"
+            >
               <Users className="w-5 h-5 mr-2" />
               Create Room Now
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />

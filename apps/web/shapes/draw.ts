@@ -1,3 +1,5 @@
+import { HTTP_BACKEND } from "@/config";
+import axios from "axios";
 
 type Shape = {
     type: "rect";
@@ -18,7 +20,7 @@ type Shape = {
     endY: number;
 }
 
-export async function initDraw(canvas: HTMLCanvasElement, roomId: number, socket: WebSocket) {
+export async function initDraw(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     const ctx = canvas.getContext("2d");
 
     let existingShapes: Shape[] = await getExistingShapes(roomId)
@@ -30,8 +32,9 @@ export async function initDraw(canvas: HTMLCanvasElement, roomId: number, socket
     socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
 
-        if (message.type == "shape") {
-            existingShapes.push(message.shape)
+        if (message.type == "chat") {
+            const parsedShape = JSON.parse(message.message)
+            existingShapes.push(parsedShape.shape)
             clearCanvas(existingShapes, canvas, ctx);
         }
     }
@@ -81,12 +84,11 @@ export async function initDraw(canvas: HTMLCanvasElement, roomId: number, socket
 
         existingShapes.push(shape);
 
-        // Save shape to database
-        await saveShape(roomId, shape);
-
         socket.send(JSON.stringify({
-            type: "shape",
-            shape: shape,
+            type: "chat",
+            message: JSON.stringify({
+                shape
+            }),
             roomId
         }))
 
@@ -133,41 +135,14 @@ function clearCanvas(existingShapes: Shape[], canvas: HTMLCanvasElement, ctx: Ca
     })
 }
 
-async function getExistingShapes(roomId: number): Promise<Shape[]> {
-    try {
-        const res = await fetch(`/api/server/getshapes?roomId=${roomId}`);
-        const data = await res.json();
-        
-        if (res.ok) {
-            return data.shapes.map((shape: any) => JSON.parse(shape.shapeData));
-        } else {
-            console.error('Error fetching shapes:', data.message);
-            return [];
-        }
-    } catch (error) {
-        console.error('Error fetching shapes:', error);
-        return [];
-    }
-}
+async function getExistingShapes(roomId: string) {
+    const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
+    const messages = res.data.messages;
 
-async function saveShape(roomId: number, shape: Shape) {
-    try {
-        const res = await fetch('/api/server/saveshape', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                roomId: roomId,
-                shapeData: JSON.stringify(shape)
-            })
-        });
-        
-        if (!res.ok) {
-            const error = await res.json();
-            console.error('Error saving shape:', error.message);
-        }
-    } catch (error) {
-        console.error('Error saving shape:', error);
-    }
+    const shapes = messages.map((x: {message: string}) => {
+        const messageData = JSON.parse(x.message)
+        return messageData.shape;
+    })
+
+    return shapes;
 }

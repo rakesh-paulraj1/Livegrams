@@ -1,6 +1,7 @@
 import GoogleProvider from 'next-auth/providers/google';
 import { setCookie } from '../utils/setcookie';
-import {prismaClient} from "@repo/db/client"
+import { prismaClient } from "@repo/db/client";
+import { signToken } from './jwt';
 
 
 
@@ -22,6 +23,8 @@ export const authentication = {
     jwt: async ({ user, token }: any) => {
       if (user) {
         token.uid = user.id;
+        token.email = user.email;
+        token.name = user.name;
       }
       return token;
     },
@@ -37,11 +40,9 @@ export const authentication = {
           }
         });
 
+        let userId: string;
         if (existingUser) {
-          await setCookie('userId', existingUser.id.toString());
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('userId', existingUser.id.toString());
-          }
+          userId = existingUser.id;
         } else {
           const newUser = await prismaClient.user.create({
             data: {
@@ -49,12 +50,24 @@ export const authentication = {
               email: session.user.email,
             }
           });
-
-          await setCookie('userId', newUser.id.toString());
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('userId', newUser.id.toString());
-          }
+          userId = newUser.id;
         }
+
+        // Set userId cookie
+        await setCookie('userId', userId);
+        
+        // Create and set JWT token
+        const jwtToken = signToken({
+          userId: userId,
+          email: session.user.email,
+          name: session.user.name
+        });
+        
+        await setCookie('jwt-token', jwtToken);
+        
+        
+        session.accessToken = jwtToken;
+        session.userId = userId;
       } catch (error) {
         console.error('Error in session callback:', error);
       }
