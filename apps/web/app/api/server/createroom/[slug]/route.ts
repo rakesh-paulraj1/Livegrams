@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const  session= await  getServerSession(authentication)
 
   try {
-    const { slug } = params;
+    const { slug } = await params;
 
     if (!slug || slug.trim().length === 0) {
       return NextResponse.json(
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       });
 
       return NextResponse.json({
+        success: true,
         roomId: newRoom.id,
       });
 

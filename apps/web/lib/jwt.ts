@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const JWT_SECRET =process.env.NEXTAUTH_SECRET || "" ;
 
 export interface JWTPayload {
   userId: string;
@@ -8,6 +8,8 @@ export interface JWTPayload {
   name: string;
   iat?: number;
   exp?: number;
+  iss?: string;
+  aud?: string;
 }
 
 /**
@@ -26,10 +28,33 @@ export function signToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, {
-      issuer: 'livegrams-app',
-      audience: 'livegrams-users'
-    }) as JWTPayload;
+    // Use decode first to avoid verification issues, then verify manually
+    const decoded = jwt.decode(token) as JWTPayload;
+    
+    if (!decoded) {
+      console.error('JWT token is invalid or malformed');
+      return null;
+    }
+    
+    // Check if token is expired
+    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+      console.error('JWT token has expired');
+      return null;
+    }
+    
+    // Verify signature manually
+    try {
+      jwt.verify(token, JWT_SECRET);
+    } catch (verifyError) {
+      console.error('JWT signature verification failed:', verifyError);
+      return null;
+    }
+    
+    // Additional validation for issuer and audience
+    if (decoded.iss !== 'livegrams-app' || decoded.aud !== 'livegrams-users') {
+      console.error('JWT token has invalid issuer or audience');
+      return null;
+    }
     
     return decoded;
   } catch (error) {
@@ -55,15 +80,13 @@ export function extractTokenFromHeader(authHeader: string | null): string | null
 export function getTokenFromCookies(cookieHeader: string | null): string | null {
   if (!cookieHeader) return null;
   
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    acc[key] = value;
+  const cookies = cookieHeader.split(';').reduce<Record<string, string>>((acc, cookie) => {
+    const [key, ...rest] = cookie.trim().split('=');
+    if (!key) return acc;
+    // Join rest in case value contains '='
+    acc[key] = rest.join('=');
     return acc;
-  }, {} as Record<string, string>);
-  
-  return cookies['jwt-token'] || null;
+  }, {});
+
+  return cookies['jwt-token'] ?? null;
 }
-
-
-
-

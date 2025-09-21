@@ -53,10 +53,9 @@ export const authentication = {
           userId = newUser.id;
         }
 
-        // Set userId cookie
+      
         await setCookie('userId', userId);
         
-        // Create and set JWT token
         const jwtToken = signToken({
           userId: userId,
           email: session.user.email,

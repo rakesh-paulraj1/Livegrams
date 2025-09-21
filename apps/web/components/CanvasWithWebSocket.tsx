@@ -4,11 +4,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Canvas } from "./Canvas";
+
+import { useSession } from "next-auth/react";
 export function CanvasWithWebSocket({roomId}: {roomId: string}) {
     const [socket, setSocket] = useState<WebSocket | null>(null);
+    const session=useSession()
+    const WS_URL="ws://localhost:8080"
+
 
     useEffect(() => {
-        const ws = new WebSocket(`${WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI3Njg0NDMwYy04YzNiLTRlZmQtOGFmNS00YzQwMzdmNjJkYzMiLCJpYXQiOjE3MzcyOTg2NjV9.xacFop0s231DoUVeLZormeIbBmIRaXftTVVI6weIqFo`)
+        if (!session.data || !session.data.accessToken) {
+            console.error("Session or access token is missing.");
+            return;
+        }
+
+        const ws = new WebSocket(`${WS_URL}?token=${session.data.accessToken}`);
 
         ws.onopen = () => {
             setSocket(ws);
@@ -17,10 +27,18 @@ export function CanvasWithWebSocket({roomId}: {roomId: string}) {
                 roomId
             });
             console.log(data);
-            ws.send(data)
-        }
+            ws.send(data);
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = (event) => {
+            console.log('WebSocket closed:', event.code, event.reason);
+        };
         
-    }, [])
+    }, [session.data, roomId])
    
     if (!socket) {
         return <div>

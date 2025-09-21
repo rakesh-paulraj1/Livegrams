@@ -1,5 +1,18 @@
-import { Tool } from "@/components/Canvas";
-import { getExistingShapes } from "./http";
+import { Tool } from "../components/Canvas";
+
+export async function getExistingShapes(roomId: string) {
+    try {
+        const response = await fetch(`/api/shapes/${roomId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch shapes');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching shapes:', error);
+        return [];
+    }
+}
+
 
 type Shape = {
     type: "rect";
@@ -94,12 +107,12 @@ export class Game {
         })
     }
 
-    mouseDownHandler = (e) => {
+    mouseDownHandler = (e: { clientX: number; clientY: number; }) => {
         this.clicked = true
         this.startX = e.clientX
         this.startY = e.clientY
     }
-    mouseUpHandler = (e) => {
+    mouseUpHandler = (e: { clientX: number; clientY: number; }) => {
         this.clicked = false
         const width = e.clientX - this.startX;
         const height = e.clientY - this.startY;
@@ -139,7 +152,7 @@ export class Game {
             roomId: this.roomId
         }))
     }
-    mouseMoveHandler = (e) => {
+    mouseMoveHandler = (e: { clientX: number; clientY: number; }) => {
         if (this.clicked) {
             const width = e.clientX - this.startX;
             const height = e.clientY - this.startY;

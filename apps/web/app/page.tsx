@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -16,7 +17,7 @@ import {
   Plus,
   Hash
 } from 'lucide-react';
-
+import { useSession } from 'next-auth/react';
 
 function App() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -24,20 +25,14 @@ function App() {
   const [roomName, setRoomName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
 
-  const handleCreateRoom = async () => {
+  const handleCreateRoom = async (roomName: string) => {
     if (!roomName.trim()) return;
     
     try {
-      const response = await fetch('/api/server/joinroom', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          roomName: roomName.trim(),
-          action: 'create'
-        }),
+      const response = await fetch(`/api/server/createroom/${roomName}`, {
+        method: 'POST'
       });
       
       const data = await response.json();
@@ -45,46 +40,39 @@ function App() {
       if (response.ok && data.success) {
         router.push(`/collab/${data.roomId}`);
       } else {
+        setIsCreating(false);
         alert(data.message || 'Failed to create room. Please try again.');
       }
     } catch (error) {
       console.error('Error creating room:', error);
+      setIsCreating(false);
       alert('Network error. Please check your connection and try again.');
     }
   };
 
-  // const handleJoinRoom = async () => {
-  //   if (!roomId.trim()) return;
+  const handleJoinRoom = async () => {
+    if (!roomId.trim()) return;
     
-  //   try {
-  //     const response = await fetch('/api/server/joinroom', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         roomId: roomId.trim(),
-  //         action: 'join'
-  //       }),
-  //     });
+    try {
+      const response = await fetch(`/api/server/joinroom${roomName}`, {
+        method: 'POST',
+      });
       
-  //     const data = await response.json();
+      const data = await response.json();
       
-  //     if (response.ok && data.success) {
-  //       router.push(`/collab/${data.roomId}`);
-  //     } else {
-  //       // Handle error cases
-  //       alert(data.message || 'Failed to join room. Please check the room ID and try again.');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error joining room:', error);
-  //     alert('Network error. Please check your connection and try again.');
-  //   }
-  // };
+      if (response.ok && data.success) {
+        router.push(`/collab/${data.roomId}`);
+      } else {
+        alert(data.message || 'Failed to join room. Please check the room ID and try again.');
+      }
+    } catch (error) {
+      console.error('Error joining room:', error);
+      alert('Network error. Please check your connection and try again.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Room Selection Dialog */}
       {isDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
@@ -119,7 +107,7 @@ function App() {
                   <button
                     onClick={() => {
                       setIsCreating(true);
-                      handleCreateRoom();
+                      handleCreateRoom(roomName);
                     }}
                     disabled={!roomName.trim() || isCreating}
                     className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -172,7 +160,20 @@ function App() {
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <button className="text-gray-600 hover:text-gray-900 transition-colors" onClick={()=>signIn()}>Sign In</button>
+              {status === "authenticated" && session?.user?.image ? (
+                <div className="flex items-center space-x-2">
+                
+                  <Image
+                       src={session?.user?.image ?? ""}
+                       className="h-7 w-7 flex-shrink-0 rounded-full"
+                       width={50}
+                       height={50}
+                       alt="Avatar"
+                     />
+                </div>
+              ) : (
+                <button className="text-gray-600 hover:text-gray-900 transition-colors" onClick={()=>signIn()}>Sign In</button>
+              )}
             </div>
           </div>
         </div>

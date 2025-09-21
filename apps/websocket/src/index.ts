@@ -1,7 +1,7 @@
 import { WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || "livesgram_password";
 const wss = new WebSocketServer({ port: 8080 });
 
 interface JWTPayload {
@@ -47,7 +47,6 @@ wss.on("connection", function connection(ws, request) {
 
   console.log(`WebSocket connection established for user: ${userInfo.name} (${userInfo.email})`);
   
-  // Store user info in the WebSocket connection
   (ws as any).userInfo = userInfo;
   
   ws.on("message", function message(data) {

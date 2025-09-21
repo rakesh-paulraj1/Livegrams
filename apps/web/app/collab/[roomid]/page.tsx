@@ -1,12 +1,6 @@
-import { RoomCanvas } from "@/components/RoomCanvas";
+import { CanvasWithWebSocket } from "../../../components/CanvasWithWebSocket";
 
-export default async function CanvasPage({ params }: {
-    params: {
-        roomId: string
-    }
-}) {
-    const roomId = (await params).roomId;
-
-    return <RoomCanvas roomId={roomId} />
-   
+export default function CanvasPage({ params }: { params: { roomId: string } }) {
+  const roomId = params.roomId; // ✅ no await needed
+  return <CanvasWithWebSocket roomId={roomId} />;
 }
