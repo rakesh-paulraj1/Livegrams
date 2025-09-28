@@ -23,7 +23,7 @@ export async function POST(
  
   try {
 
-    const { slug } = params;
+    const { slug } = await params;
     if (!slug || typeof slug !== 'string' || slug.trim().length === 0) {
       return NextResponse.json(
         { message: "Invalid or missing room slug" },

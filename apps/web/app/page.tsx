@@ -21,7 +21,7 @@ import { useSession } from 'next-auth/react';
 
 function App() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [roomId, setRoomId] = useState('');
+  const [joinroom, setjoinroom] = useState('');
   const [roomName, setRoomName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
@@ -50,11 +50,11 @@ function App() {
     }
   };
 
-  const handleJoinRoom = async () => {
-    if (!roomId.trim()) return;
+  const handleJoinRoom = async (joinroom: string) => {
+    if (!joinroom.trim()) return;
     
     try {
-      const response = await fetch(`/api/server/joinroom${roomName}`, {
+      const response = await fetch(`/api/server/joinroom/${joinroom}`, {
         method: 'POST',
       });
       
@@ -130,13 +130,13 @@ function App() {
                   <input
                     type="text"
                     placeholder="Enter room ID..."
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.target.value)}
+                    value={joinroom}
+                    onChange={(e) => setjoinroom(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   <button
-                    onClick={handleJoinRoom}
-                    disabled={!roomId.trim()}
+                    onClick={()=>handleJoinRoom(joinroom)}
+                    // disabled={!joinroom.trim()}
                     className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-emerald-600 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Join Room
@@ -147,7 +147,7 @@ function App() {
           </div>
         </div>
       )}
-      {/* Navigation */}
+     
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">

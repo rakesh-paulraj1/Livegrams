@@ -1,14 +1,33 @@
 import { ReactNode } from "react";
 
 export function IconButton({
-    icon, onClick, activated
+    icon, 
+    onClick, 
+    activated,
+    disabled = false
 }: {
-    icon: ReactNode,
-    onClick: () => void,
-    activated: boolean
+    icon: ReactNode;
+    onClick: () => void;
+    activated: boolean;
+    disabled?: boolean;
 }) {
-    return <div className={`m-2 pointer rounded-full border p-2 bg-black hover:bg-gray ${activated ? "text-red-400" : "text-white"}`} onClick={onClick}>
-        {icon}
-    </div>
+    const handleClick = () => {
+        if (!disabled) {
+            onClick();
+        }
+    };
+
+    return (
+        <div 
+            className={`m-2 rounded-full border p-2 bg-black transition-colors ${
+                disabled 
+                    ? "opacity-50 cursor-not-allowed" 
+                    : "cursor-pointer hover:bg-gray"
+            } ${activated ? "text-red-400" : "text-white"}`} 
+            onClick={handleClick}
+        >
+            {icon}
+        </div>
+    );
 }
 
