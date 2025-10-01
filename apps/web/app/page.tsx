@@ -98,12 +98,18 @@ function App() {
                 <p className="text-gray-600 text-sm mb-4">Start a new collaborative drawing session</p>
                 <div className="space-y-3">
                   <input
-                    type="text"
-                    placeholder="Enter room name..."
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+  type="text"
+  placeholder="Enter room name..."
+  value={roomName}
+  onChange={(e) => setRoomName(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' && roomName.trim()) {
+      setIsCreating(true);
+      handleCreateRoom(roomName);
+    }
+  }}
+  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+/>
                   <button
                     onClick={() => {
                       setIsCreating(true);
@@ -132,6 +138,11 @@ function App() {
                     placeholder="Enter room ID..."
                     value={joinroom}
                     onChange={(e) => setjoinroom(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && joinroom.trim()) {
+                        handleJoinRoom(joinroom);
+                      }
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   <button

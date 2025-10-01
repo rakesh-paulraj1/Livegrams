@@ -1,5 +1,4 @@
 import { Tool } from "../components/Canvas";
-
 export type Shape =
   | {
       type: "rect";
@@ -34,8 +33,36 @@ export async function getExistingShapes(roomId: string): Promise<Shape[]> {
     return [];
   }
 }
+async function createShape(shape: Shape, roomId: string): Promise<void> {
+  try {
+    console.log(roomId);
+    const parsedshape=JSON.stringify(shape);
+    console.log(parsedshape);
+    const response = await fetch(`/api/server/saveshape`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        roomId: Number(roomId),
+        shapeData: parsedshape
+      }),
+    });
+    
 
-// Add this at the top level (outside the Game class)
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API Error:", errorData);
+      throw new Error(`Failed to save shape: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log("Shape saved:", result);
+  } catch (error) {
+    console.error("Error creating shape:", error);
+  }
+}
+
 function makeCanvasFullscreen(canvas: HTMLCanvasElement) {
   canvas.style.position = "fixed";
   canvas.style.top = "0";
@@ -63,7 +90,6 @@ export class Game {
   constructor(canvas: HTMLCanvasElement, roomId: string, socket: WebSocket) {
     this.canvas = canvas;
 
-    // Set a larger default size for the canvas
     this.canvas.width = 1200;
     this.canvas.height = 700;
 
@@ -100,7 +126,6 @@ export class Game {
 
   private sendShape(shape: Shape): void {
     if (this.socket.readyState === WebSocket.OPEN) {
-      // Send the shape directly, not wrapped in a message object
       const message = {
         type: "chat",
         shape,
@@ -114,11 +139,11 @@ export class Game {
     this.socket.onmessage = (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data);
-        console.log("Received WebSocket message:", message);
+        // console.log("Received WebSocket message:", message);
         if (message.type === "chat" && message.shape) {
           this.existingShapes.push(message.shape);
           this.clearAndRedraw();
-          console.log("Added new shape from WebSocket");
+          // console.log("Added new shape from WebSocket");
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
@@ -188,7 +213,6 @@ export class Game {
     if (!this.isDrawing) return;
     this.isDrawing = false;
     
-    // For pencil, drawing happens on mouse move, so we do nothing on mouse up.
     if (this.selectedTool === "pencil") return;
 
     const rect = this.canvas.getBoundingClientRect();
@@ -215,7 +239,13 @@ export class Game {
       this.existingShapes.push(shape);
       this.sendShape(shape);
       this.clearAndRedraw();
+      createShape(shape, this.roomId);
     }
+
+    // const jsonshape=
+    // const saveshape= await prismaClient.shape.creat
+    
+    
   };
 
   private mouseMoveHandler = (e: MouseEvent): void => {
@@ -225,7 +255,6 @@ export class Game {
     const currentX = e.clientX - rect.left;
     const currentY = e.clientY - rect.top;
 
-    // **FIX**: Implement proper continuous drawing for the pencil tool.
     if (this.selectedTool === "pencil") {
       const pencilSegment: Shape = {
         type: "pencil",
@@ -237,14 +266,11 @@ export class Game {
       this.existingShapes.push(pencilSegment);
       this.sendShape(pencilSegment);
 
-      // Redraw everything including the new segment
       this.clearAndRedraw();
 
-      // Update the start position for the *next* segment
       this.startX = currentX;
       this.startY = currentY;
     } else {
-      // For other tools, just draw a preview
       this.clearAndRedraw();
       
       this.ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
