@@ -1,7 +1,7 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
   Sparkles, 
@@ -15,17 +15,31 @@ import {
   Star,
   X,
   Plus,
-  Hash
+  Hash,
+  LogOut
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 function App() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [joinroom, setjoinroom] = useState('');
   const [roomName, setRoomName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleCreateRoom = async (roomName: string) => {
     if (!roomName.trim()) return;
@@ -172,15 +186,39 @@ function App() {
             </div>
             <div className="hidden md:flex items-center space-x-8">
               {status === "authenticated" && session?.user?.image ? (
-                <div className="flex items-center space-x-2">
-                
-                  <Image
-                       src={session?.user?.image ?? ""}
-                       className="h-7 w-7 flex-shrink-0 rounded-full"
-                       width={50}
-                       height={50}
-                       alt="Avatar"
-                     />
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                  >
+                    <Image
+                      src={session?.user?.image ?? ""}
+                      className="h-8 w-8 flex-shrink-0 rounded-full cursor-pointer border-2 border-gray-200 hover:border-purple-500 transition-colors"
+                      width={50}
+                      height={50}
+                      alt="Avatar"
+                    />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-semibold text-gray-900">{session?.user?.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          signOut({ callbackUrl: '/' });
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4 mr-3" />
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button className="text-gray-600 hover:text-gray-900 transition-colors" onClick={()=>signIn()}>Sign In</button>

@@ -3,5 +3,6 @@
     {
       "mode": "auto"
     }
-  ]
+  ],
+  "editor.fontFamily": "Hack, 'Fira Code', 'JetBrains Mono', monospace"
 }

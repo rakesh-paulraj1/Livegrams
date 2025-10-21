@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET =process.env.NEXTAUTH_SECRET || "" ;
+const JWT_SECRET =process.env.NEXTAUTH_SECRET || "livesgram_password" ;
 
 export interface JWTPayload {
   userId: string;

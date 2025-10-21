@@ -15,6 +15,7 @@
     "@repo/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.1.13",
     "cookie": "^1.0.2",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.544.0",
     "next": "^15.5.0",
     "next-auth": "^4.24.11",
@@ -22,17 +23,17 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^4.1.13",
-    "zod": "^3.22.4",
-    "jsonwebtoken": "^9.0.2"
+    "tldraw": "^4.1.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@repo/db": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^22.15.3",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
-    "@types/jsonwebtoken": "^9.0.5",
     "eslint": "^9.34.0",
     "typescript": "5.9.2"
   }

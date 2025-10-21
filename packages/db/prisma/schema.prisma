@@ -1,4 +1,4 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file, 
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
@@ -22,12 +22,13 @@ model User{
 }
 
 model Room{
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   slug        String    @unique
   createdAt   DateTime  @default(now())
   adminId     String
   admin       User      @relation("RoomAdmin", fields: [adminId], references: [id])
   shapes      Shape[]
+  store       Store[]
 }
 
 model Shape{
@@ -38,3 +39,9 @@ model Shape{
   room      Room      @relation(fields: [roomId], references: [id])
 }
 
+model Store{
+  id        Int @id @default(autoincrement())
+  roomId    Int
+  storedata String
+  room      Room      @relation(fields: [roomId], references: [id])
+}

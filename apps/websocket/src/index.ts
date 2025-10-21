@@ -1,7 +1,7 @@
 import { WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "livesgram_password";
+const JWT_SECRET =  "livesgram_password";
 const wss = new WebSocketServer({ port: 8080 });
 
 interface JWTPayload {
@@ -53,8 +53,7 @@ wss.on("connection", function connection(ws, request) {
     try {
       const messageData = JSON.parse(data.toString());
       console.log(`Message from ${userInfo.name}:`, messageData);
-      
-      // Broadcast to all connected clients in the same room
+    
       if (messageData.roomId) {
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === client.OPEN) {
