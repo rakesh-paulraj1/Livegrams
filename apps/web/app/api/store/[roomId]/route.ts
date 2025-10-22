@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prismaClient } from '@repo/db/client';
 
-// GET - Load the Tldraw snapshot for a room
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { roomId: string } }

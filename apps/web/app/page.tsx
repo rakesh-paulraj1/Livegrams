@@ -52,7 +52,7 @@ function App() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        router.push(`/collab/${data.roomId}`);
+        router.push(`/setup/${data.roomId}`);
       } else {
         setIsCreating(false);
         alert(data.message || 'Failed to create room. Please try again.');
@@ -75,7 +75,7 @@ function App() {
       const data = await response.json();
       
       if (response.ok && data.success) {
-        router.push(`/collab/${data.roomId}`);
+        router.push(`/setup/${data.roomId}`);
       } else {
         alert(data.message || 'Failed to join room. Please check the room ID and try again.');
       }

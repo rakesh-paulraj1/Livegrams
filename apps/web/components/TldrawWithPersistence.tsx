@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react';
-import { Tldraw, getSnapshot, loadSnapshot, useEditor, TLStoreSnapshot } from 'tldraw';
+import { Tldraw, getSnapshot, useEditor, TLStoreSnapshot } from 'tldraw';
 import 'tldraw/tldraw.css';
 
 interface TldrawWithPersistenceProps {
@@ -46,61 +46,16 @@ function SaveButton({ roomId }: { roomId: string }) {
     <button
       onClick={handleSave}
       disabled={isSaving}
-      className={`absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-semibold transition-all ${
+      className={`absolute top-11 left-1 z-[999] px-4 py-2 rounded-lg font-semibold transition-all ${
         saveStatus === 'success'
           ? 'bg-green-500 text-white'
           : saveStatus === 'error'
           ? 'bg-red-500 text-white'
           : 'bg-blue-500 text-white hover:bg-blue-600'
-      } disabled:opacity-50 disabled:cursor-not-allowed`}
+      } disabled:opacity-50 disabled:cursor-not-allowed shadow-lg`}
     >
-      {isSaving ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
+      {isSaving ? 'Saving...': saveStatus === 'success' ? 'Saved' : saveStatus === 'error' ? 'Error' : ' Save'}
     </button>
-  );
-}
-
-function LoadButton({ roomId }: { roomId: string }) {
-  const editor = useEditor();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleLoad = async () => {
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch(`/api/store/${roomId}`);
-      const data = await response.json();
-
-      if (data.success && data.snapshot) {
-        editor.setCurrentTool('select'); // Reset tool state
-        loadSnapshot(editor.store, data.snapshot);
-      } else {
-        console.log('No snapshot found or failed to load:', data.message);
-      }
-    } catch (error) {
-      console.error('Error loading snapshot:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleLoad}
-      disabled={isLoading}
-      className="absolute top-4 right-28 z-50 px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {isLoading ? 'Loading...' : 'Load'}
-    </button>
-  );
-}
-
-function TldrawWithButtons({ roomId }: { roomId: string }) {
-  return (
-    <>
-      <Tldraw />
-      <SaveButton roomId={roomId} />
-      <LoadButton roomId={roomId} />
-    </>
   );
 }
 
@@ -138,7 +93,7 @@ export function TldrawWithPersistence({ roomId }: TldrawWithPersistenceProps) {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <Tldraw snapshot={snapshot ?? undefined}>
-        <TldrawWithButtons roomId={roomId} />
+        <SaveButton roomId={roomId} />
       </Tldraw>
     </div>
   );
