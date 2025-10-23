@@ -1,6 +1,8 @@
 "use client"
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Tldraw, getSnapshot, useEditor, TLStoreSnapshot, TLRecord } from 'tldraw';
+import { createPresenceStateDerivation, type TLPresenceUserInfo, type TLInstancePresence } from '@tldraw/tlschema';
+import { atom, type Signal } from '@tldraw/state';
 import { useSession } from 'next-auth/react';
 import 'tldraw/tldraw.css';
 
@@ -15,16 +17,33 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const isApplyingRemoteChanges = useRef(false);
+  const lastPresenceSentRef = useRef<string>('');
+  const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Get JWT token for WebSocket authentication
+  // Derive a deterministic color from the user id
+  const userColor = useCallback((id: string) => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 90%, 55%)`;
+  }, []);
+
+  // Create a user signal for presence derivation
+  const userSignalRef = useRef<Signal<TLPresenceUserInfo> | null>(null);
+  useEffect(() => {
+    const uid = (session?.user as { id?: string } | undefined)?.id || 'guest';
+    const name = session?.user?.name || 'Guest';
+    const color = userColor(uid);
+    userSignalRef.current = atom<TLPresenceUserInfo>('presence-user', { id: uid, name, color });
+  }, [session, userColor]);
+
+  const presenceStateRef = useRef<Signal<null | TLInstancePresence> | null>(null);
+  
   const getToken = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/session');
       const sessionData = await response.json();
-      
       if (sessionData?.user) {
-        // Generate JWT token - you might need an API endpoint for this
         const tokenResponse = await fetch('/api/auth/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,14 +58,12 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
     }
   }, []);
 
-  // Save snapshot to database
   const saveSnapshot = async () => {
     try {
       setIsSaving(true);
       setSaveStatus('idle');
       
       const snapshot = getSnapshot(editor.store);
-      
       const response = await fetch(`/api/store/${roomId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,7 +87,6 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
     }
   };
 
-  // Initialize WebSocket connection
   useEffect(() => {
     let ws: WebSocket | null = null;
 
@@ -82,51 +98,77 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
           setConnectionStatus('error');
           return;
         }
-
-        ws = new WebSocket(`ws://localhost:8080?token=${token}`);
+  const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
+  ws = new WebSocket(`${WS_URL}?token=${token}`);
         wsRef.current = ws;
-
         ws.onopen = () => {
           console.log('WebSocket connected');
           setConnectionStatus('connected');
           
-          // Send initial join message
           ws?.send(JSON.stringify({
             type: 'join',
             roomId,
           }));
+
+          // Start presence derivation and sending loop once connected
+          if (userSignalRef.current) {
+            presenceStateRef.current = createPresenceStateDerivation(userSignalRef.current)(editor.store);
+            // Send immediately and then on interval when it changes
+            const sendPresence = () => {
+              const presence = presenceStateRef.current?.get?.();
+              if (!presence) return;
+              const serialized = JSON.stringify(presence);
+              if (serialized !== lastPresenceSentRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+                lastPresenceSentRef.current = serialized;
+                wsRef.current?.send(JSON.stringify({
+                  type: 'presence',
+                  roomId,
+                  presence,
+                }));
+              }
+            };
+            // send once
+            sendPresence();
+            // then poll at a light interval
+            presenceIntervalRef.current = setInterval(sendPresence, 150);
+          }
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            
-            if (data.roomId === roomId && data.type === 'shape') {
-              // Apply remote changes
-              isApplyingRemoteChanges.current = true;
-              
-              if (data.shape) {
-                // Update the store with the received shape
-                editor.store.put([data.shape]);
+            if (data.roomId !== roomId) return;
+            if (data.type === 'shape') {
+              // Use mergeRemoteChanges to properly handle remote updates
+              editor.store.mergeRemoteChanges(() => {
+                if (data.shape) {
+                  editor.store.put([data.shape]);
+                }
+              });
+            } else if (data.type === 'presence') {
+              // Apply collaborator presence updates
+              if (data.presence) {
+                editor.store.mergeRemoteChanges(() => {
+                  editor.store.put([data.presence]);
+                });
               }
-              
-              isApplyingRemoteChanges.current = false;
             }
           } catch (error) {
             console.error('Error processing WebSocket message:', error);
           }
-        };
-
+        }
         ws.onerror = (error) => {
           console.error('WebSocket error:', error);
           setConnectionStatus('error');
         };
-
         ws.onclose = () => {
           console.log('WebSocket disconnected');
           setConnectionStatus('disconnected');
           
-          // Attempt to reconnect after 3 seconds
+          if (presenceIntervalRef.current) {
+            clearInterval(presenceIntervalRef.current);
+            presenceIntervalRef.current = null;
+          }
           setTimeout(() => {
             if (wsRef.current?.readyState === WebSocket.CLOSED) {
               setConnectionStatus('connecting');
@@ -145,27 +187,26 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
     }
 
     return () => {
+      if (presenceIntervalRef.current) {
+        clearInterval(presenceIntervalRef.current);
+        presenceIntervalRef.current = null;
+      }
       if (ws) {
         ws.close();
       }
     };
   }, [session, roomId, getToken, editor]);
 
-  // Listen to local changes and broadcast to other users
+  
   useEffect(() => {
     const handleStoreChange = (changes: { changes: { added: Record<string, TLRecord>; updated: Record<string, [from: TLRecord, to: TLRecord]>; removed: Record<string, TLRecord> } }) => {
-      // Don't broadcast if we're applying remote changes
-      if (isApplyingRemoteChanges.current) return;
-      
       const ws = wsRef.current;
       if (ws?.readyState === WebSocket.OPEN) {
-        // Get the changed records
         const changedRecords: TLRecord[] = [
           ...Object.values(changes.changes.added),
           ...Object.values(changes.changes.updated).map((u) => u[1])
         ];
 
-        // Broadcast each change
         changedRecords.forEach((record) => {
           ws.send(JSON.stringify({
             type: 'shape',
@@ -175,10 +216,9 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
         });
       }
     };
-
     const unsubscribe = editor.store.listen(handleStoreChange, {
       scope: 'document',
-      source: 'user',
+      source: 'user',  // Only listen to user changes, not remote changes
     });
 
     return () => {
@@ -189,7 +229,7 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
   return (
     <>
       {/* Connection Status Indicator */}
-      <div className="absolute top-4 left-4 z-[999] flex items-center gap-2">
+      <div className="absolute top-1 inset-x-0 z-[999] flex items-center justify-center gap-2">
         <div className={`px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg ${
           connectionStatus === 'connected' 
             ? 'bg-green-500 text-white' 
@@ -209,7 +249,7 @@ function MultiplayerSync({ roomId }: { roomId: string }) {
       <button
         onClick={saveSnapshot}
         disabled={isSaving}
-        className={`absolute top-4 right-4 z-[999] px-4 py-2 rounded-lg font-semibold transition-all ${
+        className={`absolute top-11  z-[999] px-4 py-2 rounded-lg font-semibold transition-all ${
           saveStatus === 'success'
             ? 'bg-green-500 text-white'
             : saveStatus === 'error'

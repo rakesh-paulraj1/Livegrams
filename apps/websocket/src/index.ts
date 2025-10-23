@@ -52,7 +52,6 @@ wss.on("connection", function connection(ws, request) {
   ws.on("message", function message(data) {
     try {
       const messageData = JSON.parse(data.toString());
-      console.log(`Message from ${userInfo.name}:`, messageData);
     
       if (messageData.roomId) {
         wss.clients.forEach((client) => {

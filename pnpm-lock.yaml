@@ -54,6 +54,12 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.1.13
         version: 4.1.13
+      '@tldraw/state':
+        specifier: ^4.1.1
+        version: 4.1.1
+      '@tldraw/tlschema':
+        specifier: ^4.1.1
+        version: 4.1.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       cookie:
         specifier: ^1.0.2
         version: 1.0.2
