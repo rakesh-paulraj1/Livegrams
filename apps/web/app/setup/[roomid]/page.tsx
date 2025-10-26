@@ -1,3 +1,4 @@
+// import { TldrawMulti } from "../../../components/Tldrawmulti";
 import { TldrawMultiplayer } from "../../../components/TldrawMultiplayer";
 
 export default function SetupTldrawPage({ params }: { params: { roomid: string } }) {

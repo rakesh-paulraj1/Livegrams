@@ -52,13 +52,21 @@ wss.on("connection", function connection(ws, request) {
   ws.on("message", function message(data) {
     try {
       const messageData = JSON.parse(data.toString());
+      console.log(`[WS] Received message from ${userInfo.name}:`, messageData.type, 'roomId:', messageData.roomId);
     
-      if (messageData.roomId) {
-        wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === client.OPEN) {
+      if (!messageData.roomId) {
+        console.log('[WS] No roomId in message, ignoring');
+        return;
+      }
+
+      // Broadcast to other clients in the same room
+      let broadcastCount = 0;
+      wss.clients.forEach((client) => {
+        if (client !== ws && client.readyState === client.OPEN) {
+          if (messageData.type === 'record') {
             client.send(JSON.stringify({
-              type: messageData.type || 'shape',
-              shape: messageData.shape,
+              type: 'record',
+              record: messageData.record,
               roomId: messageData.roomId,
               user: {
                 id: userInfo.userId,
@@ -66,11 +74,36 @@ wss.on("connection", function connection(ws, request) {
                 email: userInfo.email
               }
             }));
+            broadcastCount++;
+          } else if (messageData.type === 'record-removed') {
+            client.send(JSON.stringify({
+              type: 'record-removed',
+              ids: messageData.ids,
+              roomId: messageData.roomId,
+              user: {
+                id: userInfo.userId,
+                name: userInfo.name,
+                email: userInfo.email
+              }
+            }));
+            broadcastCount++;
+          } else if (messageData.type === 'join') {
+            client.send(JSON.stringify({
+              type: 'join',
+              roomId: messageData.roomId,
+              user: {
+                id: userInfo.userId,
+                name: userInfo.name,
+                email: userInfo.email
+              }
+            }));
+            broadcastCount++;
           }
-        });
-      }
+        }
+      });
+      console.log(`[WS] Broadcasted ${messageData.type} message to ${broadcastCount} clients`);
     } catch (error) {
-      console.error('Error processing WebSocket message:', error);
+      console.error('[WS] Error processing WebSocket message:', error);
     }
   });
 
