@@ -1,5 +1,5 @@
 "use client"
-import { Tldraw } from 'tldraw';
+import { Tldraw,TldrawOptions} from 'tldraw';
 import { useSession } from 'next-auth/react';
 import 'tldraw/tldraw.css';
 import ConnectionUI from './Connectionui';
@@ -18,7 +18,6 @@ interface TldrawMultiplayerProps {
 export function TldrawMultiplayer({ roomId }: TldrawMultiplayerProps) {
   const { data: session } = useSession();
   
-  // Custom hooks
   const storeWithStatus = useTldrawStore(roomId);
   const getToken = useAuthToken();
   const userColor = useUserColor();
@@ -55,9 +54,17 @@ export function TldrawMultiplayer({ roomId }: TldrawMultiplayerProps) {
     );
   }
 
+  
+
+  const options: Partial<TldrawOptions> = {
+  maxPages: 2,
+  animationMediumMs: 5000,
+}
+
+
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Tldraw store={storeWithStatus}>
+      <Tldraw store={storeWithStatus} options={options} >
         <ConnectionUI 
           connectionStatus={connectionStatus}
           isSaving={isSaving}

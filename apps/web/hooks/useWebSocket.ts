@@ -31,7 +31,6 @@ export function useWebSocket(roomId: number) {
       }
     }
 
-    // Cleanup on unmount or when dependencies change
     return () => {
       if (socketRef.current) {
         socketRef.current.close();

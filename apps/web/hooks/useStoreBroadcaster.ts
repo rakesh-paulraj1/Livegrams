@@ -4,7 +4,7 @@ import { type TLStoreWithStatus, type TLRecord, type TLStore } from 'tldraw';
 interface UseStoreBroadcasterProps {
   roomId: string;
   storeWithStatus: TLStoreWithStatus;
-  wsRef: React.MutableRefObject<WebSocket | null>;
+  wsRef: React.RefObject<WebSocket | null>;
 }
 
 export function useStoreBroadcaster({ roomId, storeWithStatus, wsRef }: UseStoreBroadcasterProps) {
@@ -22,7 +22,6 @@ export function useStoreBroadcaster({ roomId, storeWithStatus, wsRef }: UseStore
       const ws = wsRef.current;
       if (ws?.readyState !== WebSocket.OPEN) return;
       
-      // Exclude presence since it's handled separately in the presence effect
       const collaborativeTypes = ['shape', 'draw', 'geo', 'text', 'image'];
       const changedRecords: TLRecord[] = [
         ...Object.values(changes.changes.added),

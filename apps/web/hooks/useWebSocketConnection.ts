@@ -61,7 +61,6 @@ export function useWebSocketConnection({
                   return; 
                 }
               }
-              
               const existing = store.get(data.record.id);
               const isNew = !existing;
               const isUpdated = existing && JSON.stringify(existing) !== JSON.stringify(data.record);
@@ -92,7 +91,7 @@ export function useWebSocketConnection({
               setConnectionStatus('connecting');
               connectWebSocket();
             }
-          }, 3000);
+          },3000);
         };
       } catch (error) {
         console.error('Error connecting to WebSocket:', error);

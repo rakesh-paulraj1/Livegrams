@@ -18,10 +18,12 @@ export const authentication = {
       }
     })
   ],
+
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     jwt: async ({ user, token }: any) => {
       if (user) {
+        console.log(process.env.GOOGLE_CLIENT_ID);
         token.uid = user.id;
         token.email = user.email;
         token.name = user.name;

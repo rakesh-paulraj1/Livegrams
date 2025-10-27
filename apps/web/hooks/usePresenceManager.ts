@@ -9,7 +9,7 @@ interface UsePresenceManagerProps {
   storeWithStatus: TLStoreWithStatus;
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   session: Session | null;
-  wsRef: React.MutableRefObject<WebSocket | null>;
+  wsRef: React.RefObject<WebSocket | null>;
   userColor: (id: string) => string;
 }
 
@@ -86,7 +86,6 @@ export function usePresenceManager({
 
     const unsubscribe = store.listen(scheduleUpdate, { scope: 'all', source: 'user' });
 
-    // Initial presence
     updatePresence();
 
     return () => {
