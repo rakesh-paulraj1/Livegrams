@@ -24,7 +24,7 @@ export function StickyFooter() {
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
-    handleScroll() // Check initial state
+    handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 

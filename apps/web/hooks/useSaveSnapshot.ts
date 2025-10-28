@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { type TLStoreWithStatus, type TLRecord } from 'tldraw';
+import { type TLStoreWithStatus, type TLRecord, type TLStoreSnapshot } from 'tldraw';
 
 export function useSaveSnapshot(roomId: string, storeWithStatus: TLStoreWithStatus) {
   const [isSaving, setIsSaving] = useState(false);
@@ -12,10 +12,27 @@ export function useSaveSnapshot(roomId: string, storeWithStatus: TLStoreWithStat
       setIsSaving(true);
       setSaveStatus('idle');
       
+      // Build a TLStoreSnapshot-like shape from the store records.
+      // Some versions of the tldraw store expose `getSnapshot()` on the store object,
+      // but in other versions that method may not exist. To be compatible, we construct
+      // a minimal snapshot object containing the `store` map of records which
+      // `loadSnapshot()` will accept.
       const allRecords = storeWithStatus.store.allRecords();
-      const snapshot = Object.fromEntries(
-        allRecords.map((record: TLRecord) => [record.id, record])
-      );
+      // Include the serialized schema so `loadSnapshot()` can read `schema.schemaVersion`.
+      // Some tldraw versions expose `schema.serialize()`; guard in case it's missing.
+      const schema = typeof storeWithStatus.store.schema?.serialize === 'function'
+        ? storeWithStatus.store.schema.serialize()
+        : undefined;
+
+      const snapshot: Partial<TLStoreSnapshot> = {
+        store: Object.fromEntries(allRecords.map((record: TLRecord) => [record.id, record])),
+      };
+
+      if (schema) snapshot.schema = schema;
+
+      // Debug log to help diagnose loading problems on the client if they occur.
+      // Remove or lower in production.
+      console.debug('[Store] Saving snapshot (keys):', Object.keys(snapshot), 'schema:', schema?.schemaVersion);
       
       const response = await fetch(`/api/store/${roomId}`, {
         method: 'POST',

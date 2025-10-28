@@ -47,6 +47,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({
         success: true,
         roomId: newRoom.id,
+        slug: newRoom.slug,
       });
 
     } catch (dbError) {

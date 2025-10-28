@@ -82,12 +82,11 @@ export async function POST(
       );
     }
 
-    // Save the snapshot (overwrites previous by creating new entry)
-    const store = await prismaClient.store.create({
-      data: {
-        roomId,
-        storedata: JSON.stringify(snapshot),
-      },
+    
+    const store = await prismaClient.store.upsert({
+      where: { roomId },
+      update: { storedata: JSON.stringify(snapshot) },
+      create: { roomId, storedata: JSON.stringify(snapshot) },
     });
 
     return NextResponse.json({

@@ -27,21 +27,12 @@ model Room{
   createdAt   DateTime  @default(now())
   adminId     String
   admin       User      @relation("RoomAdmin", fields: [adminId], references: [id])
-  shapes      Shape[]
-  store       Store[]
-}
-
-model Shape{
-  id        Int       @id @default(autoincrement())
-  roomId    Int
-  shapeData String   
-  createdAt DateTime  @default(now())
-  room      Room      @relation(fields: [roomId], references: [id])
+  store       Store?
 }
 
 model Store{
   id        Int @id @default(autoincrement())
-  roomId    Int
+  roomId    Int @unique
   storedata String
   room      Room      @relation(fields: [roomId], references: [id])
 }

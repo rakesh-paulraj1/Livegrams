@@ -82,6 +82,8 @@ export default function FeatureCluster() {
           </div>
         </div>
       </div>
+      {/* spacer so sticky footer doesn't overlap this cluster */}
+      <div aria-hidden="true" className="h-80" />
     </div>
   )
 }

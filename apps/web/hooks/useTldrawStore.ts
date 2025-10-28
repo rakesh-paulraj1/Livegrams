@@ -16,6 +16,8 @@ export function useTldrawStore(roomId: string) {
         
         if (hasRemote) {
           try {
+            // Helpful debug info when snapshots fail to load in the wild.
+            console.debug('[Store] Fetched snapshot keys:', Object.keys(data.snapshot || {}), 'schemaVersion:', data.snapshot?.schema?.schemaVersion ?? data.snapshot?.schema?.schemaVersion);
             loadSnapshot(newStore, data.snapshot as TLStoreSnapshot);
           } catch (e) {
             console.error('[Store] Failed to load snapshot, starting with empty store:', e);
