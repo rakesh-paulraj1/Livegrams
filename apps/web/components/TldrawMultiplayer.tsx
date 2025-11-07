@@ -70,6 +70,7 @@ export function TldrawMultiplayer({ roomId }: TldrawMultiplayerProps) {
           isSaving={isSaving}
           saveStatus={saveStatus}
           onSave={saveSnapshot}
+          roomId={roomId}
         />
       </Tldraw>
     </div>

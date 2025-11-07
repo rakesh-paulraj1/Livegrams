@@ -11,6 +11,8 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { data: session, status } = useSession();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [rooms, setRooms] = useState<{ id: string; name?: string }[]>([])
+  const [roomsLoading, setRoomsLoading] = useState(false)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -21,6 +23,33 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !isUserMenuOpen) return;
+    let cancelled = false
+    async function loadRooms() {
+      setRoomsLoading(true)
+      try {
+        const owner = encodeURIComponent(session?.user?.email ?? '')
+        const res = await fetch(`/api/rooms?owner=${owner}`)
+        if (!res.ok) throw new Error('Failed')
+        const data = await res.json()
+        if (!cancelled) {
+          
+          setRooms(Array.isArray(data) ? data : [])
+        }
+      } catch (err) {
+        if (!cancelled) setRooms([])
+        console.error(err)
+      } finally {
+        if (!cancelled) setRoomsLoading(false)
+      }
+    }
+    loadRooms()
+    return () => {
+      cancelled = true
+    }
+  }, [isUserMenuOpen, status, session])
 
   const handleMobileNavClick = (sectionId: string) => {
     setIsMobileMenuOpen(false);
@@ -42,66 +71,9 @@ export default function Header() {
         </Link>
 
         <div className="absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-gray-600 transition duration-200 hover:text-gray-900 md:flex md:space-x-2">
-          <a
-            className="relative px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              const element = document.getElementById("features");
-              if (element) {
-                const headerOffset = 120;
-                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-                const offsetPosition = elementPosition - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-              }
-            }}
-          >
-            <span className="relative z-20">Features</span>
-          </a>
-          <a
-            className="relative px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              const element = document.getElementById("pricing");
-              if (element) {
-                const headerOffset = 120;
-                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-                const offsetPosition = elementPosition - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-              }
-            }}
-          >
-            <span className="relative z-20">Pricing</span>
-          </a>
-          <a
-            className="relative px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              const element = document.getElementById("testimonials");
-              if (element) {
-                const headerOffset = 120;
-                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-                const offsetPosition = elementPosition - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-              }
-            }}
-          >
-            <span className="relative z-20">Testimonials</span>
-          </a>
-          <a
-            className="relative px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              const element = document.getElementById("faq");
-              if (element) {
-                const headerOffset = 120;
-                const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-                const offsetPosition = elementPosition - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-              }
-            }}
-          >
-            <span className="relative z-20">FAQ</span>
-          </a>
+        
+       
+         
         </div>
 
         <div className="flex items-center gap-4">
@@ -125,6 +97,29 @@ export default function Header() {
                     <p className="text-sm font-medium text-gray-900">{session?.user?.name}</p>
                     <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
                   </div>
+                  {/* User's rooms list */}
+                  <div className="px-4 py-2 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">Your rooms</p>
+                    {roomsLoading ? (
+                      <p className="text-xs text-gray-500 mt-2">Loading...</p>
+                    ) : rooms.length ? (
+                      <ul className="max-h-40 overflow-auto mt-2 space-y-2">
+                        {rooms.map((r) => (
+                          <li key={r.id}>
+                            <Link
+                              href={`/setup/${r.id}`}
+                              className="block text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded"
+                              onClick={() => setIsUserMenuOpen(false)}
+                            >
+                              {r.name ?? r.id}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-2">You have not created any rooms yet.</p>
+                    )}
+                  </div>
                   <button
                     onClick={() => {
                       signOut({ callbackUrl: '/' });
@@ -140,17 +135,12 @@ export default function Header() {
             </div>
           ) : (
             <>
-              <a
-                onClick={() => signIn()}
-                className="font-medium transition-colors hover:text-gray-900 text-gray-600 text-sm cursor-pointer"
-              >
-                Log In
-              </a>
+             
               <a
                 onClick={() => signIn()}
                 className="rounded-md font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset] px-4 py-2 text-sm"
               >
-                Sign Up
+                Log In 
               </a>
             </>
           )}

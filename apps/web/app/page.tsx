@@ -1,5 +1,6 @@
 "use client"
 import React, { useEffect, useState } from "react";
+import { useSession } from 'next-auth/react'
 import { useRouter } from "next/navigation";
 import { X, Plus, Hash } from "lucide-react";
 import Header from "../components/Header";
@@ -25,6 +26,9 @@ export default function App() {
   const [copiedRoomId, setCopiedRoomId] = useState(false);
 
   const router = useRouter();
+  const { data: session, status } = useSession()
+  const [rooms, setRooms] = useState<{ id: string; name?: string }[]>([])
+  const [roomsLoading, setRoomsLoading] = useState(false)
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -33,6 +37,33 @@ export default function App() {
       setGeneratedRoomId("");
     }
   }, [isDialogOpen]);
+
+  // Load user's rooms when the modal/dialog opens — simple client fetch using session user email
+  useEffect(() => {
+    if (!isDialogOpen) return
+    const email = session?.user?.email
+    if (!email) return
+
+    let cancelled = false
+    ;(async () => {
+      setRoomsLoading(true)
+      try {
+        const res = await fetch(`/api/rooms`)
+        if (!res.ok) throw new Error('Failed to load rooms')
+        const data = await res.json()
+        if (!cancelled) setRooms(Array.isArray(data) ? data : [])
+      } catch (err) {
+        if (!cancelled) setRooms([])
+        console.error('Failed to fetch rooms', err)
+      } finally {
+        if (!cancelled) setRoomsLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isDialogOpen, session?.user?.email])
 
   const copyRoomId = async () => {
     if (!generatedRoomId) return;
@@ -197,6 +228,29 @@ export default function App() {
                         <h3 className="text-lg font-semibold text-gray-900">Join Existing Room</h3>
                       </div>
                       <p className="text-gray-600 text-sm mb-4">Enter a room ID to join an existing session</p>
+                      {/* If the user has rooms, show them for quick joining */}
+                      {status === 'authenticated' && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-gray-800 mb-2">Your rooms</p>
+                          {roomsLoading ? (
+                            <p className="text-xs text-gray-500">Loading...</p>
+                          ) : rooms.length ? (
+                            <div className="grid grid-cols-1 gap-2 mb-3">
+                              {rooms.map((r) => (
+                                <button
+                                  key={r.id}
+                                  onClick={() => handleJoinRoom(r.id)}
+                                  className="text-left px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm"
+                                >
+                                  {r.name ?? r.id}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">You have not created any rooms yet.</p>
+                          )}
+                        </div>
+                      )}
                       <div className="space-y-3">
                         <input
                           type="text"

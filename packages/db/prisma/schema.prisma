@@ -18,7 +18,7 @@ model User{
   id   String @id @default(uuid())
   email String @unique
   name String
-  rooms Room[] @relation("RoomAdmin")
+  rooms Room[] @relation("RoomAdmin") 
 }
 
 model Room{

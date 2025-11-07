@@ -2,8 +2,7 @@ import { TldrawMultiplayer } from "../../../components/TldrawMultiplayer";
 import { prismaClient } from '@repo/db/client';
 
 export default async function SetupTldrawPage({ params }: { params: { roomid: string } }) {
-  // Here params.roomid is the public room slug. We look up the internal numeric id
-  // and pass that to the client-side Tldraw component which will use it for snapshots.
+ 
   const { roomid: roomSlug } = params;
 
   const room = await prismaClient.room.findUnique({ where: { slug: roomSlug } });

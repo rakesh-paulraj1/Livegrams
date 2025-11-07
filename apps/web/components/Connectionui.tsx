@@ -1,14 +1,41 @@
+import React from 'react'
+
 export default function ConnectionUI({ 
   connectionStatus, 
   isSaving, 
   saveStatus, 
-  onSave 
+  onSave,
+  roomId,
 }: { 
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   isSaving: boolean;
   saveStatus: 'idle' | 'success' | 'error';
   onSave: () => void;
+  roomId?: string;
 }) {
+  const [copied, setCopied] = React.useState(false)
+  const copyTimeoutRef = React.useRef<number | null>(null)
+
+  const handleShare = async () => {
+    if (!roomId) return
+    try {
+      // Copy the room slug (roomId is expected to be the slug)
+      const slugToCopy = String(roomId)
+      await navigator.clipboard.writeText(slugToCopy)
+      setCopied(true)
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      // ignore copy errors
+      console.error('Copy failed', err)
+    }
+  }
+
+  React.useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
   return (
     <>
       <div className="absolute top-1 inset-x-0 z-[300] flex items-center justify-center gap-2 pointer-events-none">
@@ -32,6 +59,22 @@ export default function ConnectionUI({
           {connectionStatus === 'error' && 'Error'}
         </div>
       </div>
+
+     
+      {roomId && (
+        <div className="absolute top-4 right-44 z-[300] flex items-center space-x-2">
+          <button
+            onClick={handleShare}
+            className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm shadow-lg hover:bg-gray-50"
+            aria-label="Share room code"
+          >
+            🔗 Share
+          </button>
+          {copied && (
+            <div className="text-sm text-green-600 font-medium">Slug copied!</div>
+          )}
+        </div>
+      )}
 
       <button
         onClick={onSave}
