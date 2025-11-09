@@ -9,6 +9,7 @@ import { SafariDemo } from "../components/Safari";
 import { AndroidDemo } from "../components/Android";
 import FeatureCluster from "../components/FeatureCluster";
 import { StickyFooter } from "../components/ui/Stickyfooter";
+import Link from "next/link";
 
 function generateSlug() {
   const letters = "abcdefghijklmnopqrstuvwxyz";
@@ -286,18 +287,13 @@ export default function App() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Whiteboard</h3>
                     <p className="text-gray-600 text-sm mb-4">Use our AI to generate an instant whiteboard from prompts or ideas.</p>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => alert("AI whiteboard generation not implemented yet")}
+                      <Link
+                        href="/generative"
                         className="flex-1 px-4 py-2 rounded-lg border border-gray-300 bg-gray-200 text-gray-900 font-semibold"
                       >
                         Start AI Whiteboard
-                      </button>
-                      <button
-                        onClick={() => setSelectedBoardType("interactive")}
-                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700"
-                      >
-                        Back
-                      </button>
+                      </Link>
+                     
                     </div>
                   </div>
                 )}
