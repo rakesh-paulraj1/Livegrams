@@ -40,7 +40,6 @@ export default function CanvasAssistant({
 
     try {
       const data = await sendMessage(trimmed)
-      // data is expected to be { reply: string, shapes?: Array }
       const reply = data?.reply ?? ''
       setMessages((s) => [...s, { id: idRef.current++, text: reply, from: 'bot' }])
 
@@ -67,6 +66,8 @@ export default function CanvasAssistant({
               editor.current.createShapes(toCreate)
             } catch (err) {
               // fallback to createShape per item
+                        console.error('Error creating shapes on editor', err)
+
               toCreate.forEach((shape: any) => editor.current.createShape(shape))
             }
           })

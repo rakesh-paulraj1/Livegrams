@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, {  useRef } from 'react'
 import { Tldraw, toRichText } from 'tldraw'
 import 'tldraw/tldraw.css'
 import CanvasAssistant from '../../components/CanvasAssistant'
@@ -16,7 +16,7 @@ export default function App() {
 			x: 200,
 			y: 200,
 			props: {
-				richText: toRichText('Hello world!'),
+				richText: toRichText('Create Flowcharts diagrams with AI agents'),
 			},
 		})
 
@@ -27,7 +27,7 @@ export default function App() {
 		})
 	}
 
-	// Chat state
+
 	
 	
 	return (
@@ -40,7 +40,7 @@ export default function App() {
 			</div>
 
 		
-						<CanvasAssistant editor={editorRef} />
+				<CanvasAssistant editor={editorRef} />
 		</div>
 	)
 }

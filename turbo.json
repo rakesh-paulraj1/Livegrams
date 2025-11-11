@@ -6,7 +6,10 @@
     "NEXTAUTH_URL",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    "WS_URL"
+    "WS_URL",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "PINECONE_API_KEY"
   ],
   "tasks": {
     "build": {

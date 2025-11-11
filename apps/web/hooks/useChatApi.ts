@@ -15,12 +15,12 @@ export default function useChatApi() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
       })
+      console.log('response from the api', res)
       if (!res.ok) {
         const text = await res.text()
         throw new Error(text || 'Network error')
       }
       const data = await res.json()
-      // Return the full response so callers can use shapes and reply
       return data as any
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
