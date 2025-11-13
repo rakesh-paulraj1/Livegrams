@@ -24,10 +24,8 @@ function countShapeTypes(shapes: CanvasShape[]) {
   }, {} as Record<string, number>);
 }
 
-// Tool 1: Get canvas state
 export const getCanvasStateTool = tool(
   async ({ detailed }, config) => {
-    // Canvas shapes are passed through RunnableConfig
     const shapes = (config?.configurable?.canvasShapes as CanvasShape[]) || [];
     
     if (!detailed) {

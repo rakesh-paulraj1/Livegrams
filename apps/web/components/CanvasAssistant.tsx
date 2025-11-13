@@ -21,7 +21,10 @@ export default function CanvasAssistant({
   editor?: React.RefObject<any>
 }) {
   const editorController = useMemo(() => {
-    return editor ? new EditorController(editor) : null
+    console.log('🔧 Initializing EditorController, editor ref:', editor)
+    const controller = editor ? new EditorController(editor) : null
+    console.log('🔧 EditorController created:', controller ? 'YES' : 'NO')
+    return controller
   }, [editor])
   const [messages, setMessages] = useState<{ id: number; text: string; from: 'user' | 'bot'; complexity?: 'simple' | 'complex'; usedTools?: boolean }[]>([
     { id: 1, text: 'Hello — I am your canvas assistant. Ask me to create shapes or describe a scene.', from: 'bot' },
@@ -64,32 +67,83 @@ export default function CanvasAssistant({
   }
 
   const executeShapes = (shapes: CanvasShape[]) => {
-    if (!editorController) return false
+    if (!editorController) {
+      console.error('❌ No editorController available')
+      return false
+    }
     
     try {
-      const shapesToCreate = shapes.map(s => ({
-        id: s.id || `${s.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: s.type || 'geo',
-        x: s.x ?? 100,
-        y: s.y ?? 100,
-        props: s.props ?? {}
-      }))
-
-
-      shapesToCreate.forEach(shape => {
-        if (shape.type === 'geo' && !shape.props.geo) {
-          shape.props = { w: 100, h: 100, geo: 'rectangle', ...shape.props }
+      console.log('🎨 Executing shapes:', shapes)
+      
+      const shapesToCreate = shapes.map(s => {
+        // Generate ID if missing
+        const shapeId = s.id || `shape:${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        
+        // Ensure ID starts with "shape:"
+        const finalId = shapeId.startsWith('shape:') ? shapeId : `shape:${shapeId}`
+        
+        const shape = {
+          id: finalId,
+          type: s.type || 'geo',
+          x: s.x ?? 100,
+          y: s.y ?? 100,
+          props: { ...s.props }
         }
-        if (shape.type === 'text' && shape.props.text && !shape.props.richText) {
-          shape.props.richText = toRichText(String(shape.props.text))
-          delete shape.props.text
-        }
+        
+        console.log('📦 Prepared shape:', shape)
+        return shape
       })
 
+      // Process props for specific shape types
+      shapesToCreate.forEach(shape => {
+        // For geo shapes, ensure required props
+        if (shape.type === 'geo') {
+          if (!shape.props.geo) {
+            shape.props.geo = 'rectangle'
+          }
+          if (!shape.props.w) shape.props.w = 100
+          if (!shape.props.h) shape.props.h = 100
+          if (!shape.props.color) shape.props.color = 'black'
+          
+          // Handle text in geo shapes
+          if (shape.props.text && !shape.props.richText) {
+            shape.props.richText = toRichText(String(shape.props.text))
+            delete shape.props.text
+          }
+        }
+        
+        // For text shapes
+        if (shape.type === 'text') {
+          if (shape.props.text && !shape.props.richText) {
+            shape.props.richText = toRichText(String(shape.props.text))
+            delete shape.props.text
+          }
+          if (!shape.props.size) shape.props.size = 'm'
+          if (!shape.props.color) shape.props.color = 'black'
+        }
+        
+        // For arrow shapes
+        if (shape.type === 'arrow') {
+          if (!shape.props.color) shape.props.color = 'black'
+          // Arrows need start and end points
+          if (!shape.props.start) {
+            shape.props.start = { x: shape.x, y: shape.y }
+          }
+          if (!shape.props.end) {
+            shape.props.end = { x: (shape.x || 0) + 100, y: (shape.y || 0) + 100 }
+          }
+        }
+        
+        console.log('✅ Final shape to create:', shape)
+      })
+
+      console.log('🚀 Creating shapes via EditorController:', shapesToCreate)
       editorController.createShapes(shapesToCreate)
+      console.log('✅ Shapes created successfully')
       return true
     } catch (err) {
-      console.error('Error executing shapes:', err)
+      console.error('❌ Error executing shapes:', err)
+      console.error('Stack trace:', err instanceof Error ? err.stack : 'No stack trace')
       return false
     }
   }
@@ -137,7 +191,7 @@ export default function CanvasAssistant({
       // Handle server-processed execution instructions
       if (data?.execution && editorController) {
         try {
-          console.log('Executing server-processed instructions:', data.execution)
+          console.log('🔄 Executing server-processed instructions:', data.execution)
           
           if (!data.execution.ok) {
             console.error('❌ Server processing failed:', data.execution.error)
@@ -149,13 +203,29 @@ export default function CanvasAssistant({
             return
           }
           
+          console.log('✅ Execution action:', data.execution.action)
+          console.log('📊 Execution data:', JSON.stringify(data.execution, null, 2))
+          
           switch (data.execution.action) {
             case 'create':
+              console.log('🎨 CREATE action detected')
               if (data.execution.shapes?.length) {
+                console.log(`🔢 Number of shapes to create: ${data.execution.shapes.length}`)
+                console.log('📋 Shapes:', data.execution.shapes)
+                
                 const success = executeShapes(data.execution.shapes)
                 if (success) {
-                  console.log(`✅ Created ${data.execution.shapes.length} shapes from server instructions`)
+                  console.log(`✅ Successfully created ${data.execution.shapes.length} shapes`)
+                } else {
+                  console.error('❌ Failed to create shapes')
+                  setMessages((s) => [...s, { 
+                    id: idRef.current++, 
+                    text: 'Failed to create shapes on canvas', 
+                    from: 'bot' 
+                  }])
                 }
+              } else {
+                console.warn('⚠️ No shapes provided in create action')
               }
               break
               

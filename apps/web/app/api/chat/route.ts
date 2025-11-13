@@ -9,10 +9,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const canvasSnapshot = body?.canvasSnapshot || []
 
         try {
-                // Run the simplified LangChain agent (handles classification and routing)
                 const agentResult = await runCanvasAgent(message, canvasSnapshot)
-                console.log('🎯 Agent result:', agentResult)
-
+                console.log('Agent result:', agentResult)
                 if (!agentResult.success || !agentResult.intent) {
                         return NextResponse.json({ 
                                 success: false, 
@@ -21,7 +19,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                         }, { status: 500 })
                 }
 
-                // Process intent server-side to validate and prepare execution
+               
                 const execution = await processIntent(agentResult.intent)
                 console.log('✅ Processed execution:', execution)
 

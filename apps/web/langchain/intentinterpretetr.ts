@@ -1,6 +1,5 @@
 import { IntentSchema, Intent } from "./lib/intentshemas";
 
-// Return type for processed intents
 export interface ProcessResult {
   ok: boolean;
   error?: string;
@@ -23,7 +22,6 @@ export interface ProcessResult {
   reply?: string;
 }
 
-// Server-side intent processor - validates and prepares execution instructions
 export async function processIntent(raw: unknown): Promise<ProcessResult> {
   const parse = IntentSchema.safeParse(raw);
   if (!parse.success) {
@@ -88,7 +86,6 @@ export async function processIntent(raw: unknown): Promise<ProcessResult> {
         if (!intent.ids || intent.ids.length === 0) {
           return { ok: false, error: "Delete requires shape IDs" };
         }
-        // Ensure all IDs start with "shape:"
         const shapeIds = intent.ids.map(id => 
           id.startsWith("shape:") ? id : `shape:${id}`
         );
