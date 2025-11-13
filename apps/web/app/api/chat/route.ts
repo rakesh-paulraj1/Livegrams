@@ -1,47 +1,47 @@
 import { NextResponse } from 'next/server'
-import { runagent } from '../../../langchain/agent'
-export async function POST(request: Request) {
+import { runCanvasAgent } from '../../../langchain/agent'
+import { processIntent } from '../../../langchain/intentinterpretetr'
+import { NextRequest } from 'next/server'
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
         const body = await request.json()
         const message = body?.message || ''
+        const canvasSnapshot = body?.canvasSnapshot || []
 
         try {
-                const answer = await runagent(message)
-                console.log('agent answer', answer)
+                // Run the simplified LangChain agent (handles classification and routing)
+                const agentResult = await runCanvasAgent(message, canvasSnapshot)
+                console.log('🎯 Agent result:', agentResult)
 
-                // Normalize structured response: some agents return JSON strings for
-                // fields like `shapes`. Parse if necessary so the client always gets
-                // shapes as an array.
-                        // cast to `any` for flexible parsing of different agent shapes
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const a: any = answer
-                        const structured = a?.structuredResponse ?? a?.structured_response ?? a
+                if (!agentResult.success || !agentResult.intent) {
+                        return NextResponse.json({ 
+                                success: false, 
+                                error: agentResult.error || 'Agent failed to generate intent',
+                                reply: agentResult.reply 
+                        }, { status: 500 })
+                }
 
-                        let reply: string | undefined
-                        let shapes: unknown[] = []
+                // Process intent server-side to validate and prepare execution
+                const execution = await processIntent(agentResult.intent)
+                console.log('✅ Processed execution:', execution)
 
-                        if (structured) {
-                            reply = structured.reply ?? structured.reply_text
-
-                            const rawShapes = structured.shapes ?? structured?.structured?.shapes
-                            if (rawShapes) {
-                                if (typeof rawShapes === 'string') {
-                                    try {
-                                        shapes = JSON.parse(rawShapes)
-                                    } catch {
-                                        // fall back to returning the raw string wrapped in an array
-                                        shapes = [rawShapes]
-                                    }
-                                } else {
-                                    shapes = rawShapes
-                                }
-                            }
-                        }
-
-                        if (!reply) reply = a?.output_text ?? a?.text ?? ''
-
-                return NextResponse.json({ reply, shapes })
+                // Return combined response
+                const response = {
+                        success: true,
+                        complexity: agentResult.complexity,
+                        usedTools: agentResult.usedTools,
+                        intent: agentResult.intent,
+                        reply: agentResult.reply,
+                        execution
+                }
+               
+                return NextResponse.json(response)
         } catch (err) {
-                console.error('agent error', err)
-                return NextResponse.json({ success: false, error: String(err) }, { status: 500 })
+                console.error('❌ Agent error:', err)
+                return NextResponse.json({ 
+                        success: false, 
+                        error: String(err),
+                        reply: 'Error processing your request'
+                }, { status: 500 })
         }
 }

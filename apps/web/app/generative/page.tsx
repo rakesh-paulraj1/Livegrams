@@ -16,7 +16,7 @@ export default function App() {
 			x: 200,
 			y: 200,
 			props: {
-				richText: toRichText('Create Flowcharts diagrams with AI agents'),
+				richText: toRichText('Create Creative diagrams with AI agents'),
 			},
 		})
 
