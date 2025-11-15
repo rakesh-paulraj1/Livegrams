@@ -17,7 +17,7 @@ export default function CanvasAssistant({
   editor,
 }: {
   className?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescriEpt-eslint/no-explicit-any
   editor?: React.RefObject<any>
 }) {
   const editorController = useMemo(() => {
@@ -40,26 +40,29 @@ export default function CanvasAssistant({
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
+
+
+
   const { sendMessage, loading } = useChatApi()
 
-    const getCanvasSnapshot = (): CanvasShape[] => {
-    if (!editorController) return []
+
+  
+  const getCanvasSnapshot = (): CanvasShape[] => {
+    if (!editorController) {
+      console.log('no editor controler ')
+      return []
+    }
     try {
       const shapes = editorController.getShapes()
-      // Limit to first 10 shapes and only essential properties to reduce payload size
-      return shapes.slice(0, 10).map(shape => ({
+      const snapshot = shapes.map(shape => ({
         id: shape.id,
         type: shape.type,
         x: shape.x,
         y: shape.y,
-        props: {
-          // Only include essential props
-          geo: shape.props?.geo,
-          color: shape.props?.color,
-          w: shape.props?.w,
-          h: shape.props?.h
-        }
+        props: shape.props
       }))
+      console.log('Returning snapshot:', snapshot)
+      return snapshot
     } catch (err) {
       console.error('Error getting canvas snapshot:', err)
       return []
@@ -73,13 +76,11 @@ export default function CanvasAssistant({
     }
     
     try {
-      console.log('🎨 Executing shapes:', shapes)
+      console.log('Executing shapes:', shapes)
       
       const shapesToCreate = shapes.map(s => {
-        // Generate ID if missing
         const shapeId = s.id || `shape:${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         
-        // Ensure ID starts with "shape:"
         const finalId = shapeId.startsWith('shape:') ? shapeId : `shape:${shapeId}`
         
         const shape = {
@@ -94,9 +95,7 @@ export default function CanvasAssistant({
         return shape
       })
 
-      // Process props for specific shape types
       shapesToCreate.forEach(shape => {
-        // For geo shapes, ensure required props
         if (shape.type === 'geo') {
           if (!shape.props.geo) {
             shape.props.geo = 'rectangle'
@@ -105,14 +104,12 @@ export default function CanvasAssistant({
           if (!shape.props.h) shape.props.h = 100
           if (!shape.props.color) shape.props.color = 'black'
           
-          // Handle text in geo shapes
           if (shape.props.text && !shape.props.richText) {
             shape.props.richText = toRichText(String(shape.props.text))
             delete shape.props.text
           }
         }
         
-        // For text shapes
         if (shape.type === 'text') {
           if (shape.props.text && !shape.props.richText) {
             shape.props.richText = toRichText(String(shape.props.text))
@@ -122,10 +119,16 @@ export default function CanvasAssistant({
           if (!shape.props.color) shape.props.color = 'black'
         }
         
-        // For arrow shapes
         if (shape.type === 'arrow') {
+          const invalidProps = ['text', 'w', 'h', 'geo', 'fill', 'richText']
+          invalidProps.forEach(prop => {
+            if (shape.props[prop]) {
+              console.warn(`⚠️ Removing ${prop} property from arrow shape (not supported)`)
+              delete shape.props[prop]
+            }
+          })
+          
           if (!shape.props.color) shape.props.color = 'black'
-          // Arrows need start and end points
           if (!shape.props.start) {
             shape.props.start = { x: shape.x, y: shape.y }
           }
@@ -133,16 +136,11 @@ export default function CanvasAssistant({
             shape.props.end = { x: (shape.x || 0) + 100, y: (shape.y || 0) + 100 }
           }
         }
-        
-        console.log('✅ Final shape to create:', shape)
-      })
-
-      console.log('🚀 Creating shapes via EditorController:', shapesToCreate)
+            })
       editorController.createShapes(shapesToCreate)
-      console.log('✅ Shapes created successfully')
       return true
     } catch (err) {
-      console.error('❌ Error executing shapes:', err)
+      console.error('Error executing shapes:', err)
       console.error('Stack trace:', err instanceof Error ? err.stack : 'No stack trace')
       return false
     }
@@ -153,15 +151,12 @@ export default function CanvasAssistant({
     const trimmed = text.trim()
     if (!trimmed) return
     
-    // Prevent duplicate requests
     if (isProcessing) {
-      console.log('⏳ Request already in progress, ignoring duplicate')
+      console.log('Request already in progress, ignoring duplicate')
       return
     }
-    
-    // Prevent sending same message twice in a row
-    if (trimmed === lastRequestRef.current) {
-      console.log('⚠️ Duplicate message detected, ignoring')
+        if (trimmed === lastRequestRef.current) {
+      console.log('Please dont repeat message')
       return
     }
     
@@ -174,12 +169,21 @@ export default function CanvasAssistant({
 
     try {
       const canvasSnapshot = getCanvasSnapshot()
-      console.log('📸 Canvas snapshot:', canvasSnapshot.length, 'shapes')
-
-      const data = await sendMessage(trimmed, canvasSnapshot)
-      const reply = data?.reply ?? ''
       
-      // Add bot response with complexity info
+      let canvasImage: string | undefined
+      if (editorController) {
+        try {
+          canvasImage = await editorController.getCanvasImage()
+          console.log('Canvas screenshot captured:', canvasImage.substring(0, 50) + '...')
+        } catch (err) {
+          console.warn('Could not capture canvas image:', err)
+        }
+      }
+      
+      const data = await sendMessage(trimmed, canvasSnapshot, canvasImage)
+      const reply = data?.reply ?? ''
+      const execution = data.execution
+      console.log('Execution data received:', execution)
       setMessages((s) => [...s, { 
         id: idRef.current++, 
         text: reply, 
@@ -188,13 +192,10 @@ export default function CanvasAssistant({
         usedTools: data?.usedTools
       }])
 
-      // Handle server-processed execution instructions
+    
       if (data?.execution && editorController) {
         try {
-          console.log('🔄 Executing server-processed instructions:', data.execution)
-          
           if (!data.execution.ok) {
-            console.error('❌ Server processing failed:', data.execution.error)
             setMessages((s) => [...s, { 
               id: idRef.current++, 
               text: `Error: ${data.execution.error}`, 
@@ -202,22 +203,16 @@ export default function CanvasAssistant({
             }])
             return
           }
-          
-          console.log('✅ Execution action:', data.execution.action)
-          console.log('📊 Execution data:', JSON.stringify(data.execution, null, 2))
-          
+                  
           switch (data.execution.action) {
             case 'create':
-              console.log('🎨 CREATE action detected')
-              if (data.execution.shapes?.length) {
-                console.log(`🔢 Number of shapes to create: ${data.execution.shapes.length}`)
-                console.log('📋 Shapes:', data.execution.shapes)
-                
+              console.log('CREATE action detected')
+              if (data.execution.shapes?.length) {                
                 const success = executeShapes(data.execution.shapes)
                 if (success) {
-                  console.log(`✅ Successfully created ${data.execution.shapes.length} shapes`)
+                  console.log(`Successfully created ${data.execution.shapes.length} shapes`)
                 } else {
-                  console.error('❌ Failed to create shapes')
+                  console.error('Failed to create shapes')
                   setMessages((s) => [...s, { 
                     id: idRef.current++, 
                     text: 'Failed to create shapes on canvas', 
@@ -225,7 +220,7 @@ export default function CanvasAssistant({
                   }])
                 }
               } else {
-                console.warn('⚠️ No shapes provided in create action')
+                console.warn('No shapes provided in create action')
               }
               break
               
@@ -233,9 +228,9 @@ export default function CanvasAssistant({
               if (data.execution.id && data.execution.props) {
                 try {
                   editorController.updateShape(data.execution.id, data.execution.props)
-                  console.log(`✅ Updated shape ${data.execution.id} from server instructions`)
+                  console.log(`Updated shape ${data.execution.id} from server instructions`)
                 } catch (err) {
-                  console.error(`❌ Error updating shape ${data.execution.id}:`, err)
+                  console.error(`Error updating shape ${data.execution.id}:`, err)
                 }
               }
               break
@@ -246,50 +241,64 @@ export default function CanvasAssistant({
                   editorController.deleteShapes(data.execution.ids)
                   console.log(`✅ Deleted ${data.execution.ids.length} shapes from server instructions`)
                 } catch (err) {
-                  console.error('❌ Error deleting shapes:', err)
+                  console.error('Error deleting shapes:', err)
                 }
               }
               break
               
             case 'delete_all':
-              if (data.execution.requiresConfirmation) {
-                const confirmed = window.confirm(data.execution.message || 'Clear entire canvas?')
-                if (confirmed) {
-                  editorController.deleteAll()
-                  console.log('✅ Cleared canvas after confirmation')
-                  setMessages((s) => [...s, { 
-                    id: idRef.current++, 
-                    text: 'Canvas cleared', 
-                    from: 'bot' 
-                  }])
-                } else {
-                  console.log('❌ Canvas clear cancelled by user')
-                  setMessages((s) => [...s, { 
-                    id: idRef.current++, 
-                    text: 'Canvas clear cancelled', 
-                    from: 'bot' 
-                  }])
-                }
+              try {
+                console.log('Calling editorController.deleteAll()...')
+                editorController.deleteAll()
+                console.log('Cleared entire canvas from server instructions')
+              } catch (err) {
+                console.error('Error clearing canvas:', err)
+                console.error('Error details:', err)
               }
               break
               
             case 'batch':
               if (data.execution.actions?.length) {
-                console.log(`🔄 Processing batch with ${data.execution.actions.length} actions`)
-                // Process each action in the batch
+                console.log(`🔄 Executing batch with ${data.execution.actions.length} actions`)
                 for (const action of data.execution.actions) {
-                  // This is a simplified approach - in production you'd want proper batch handling
-                  console.log('🔄 Batch action:', action.action)
+                  try {
+                    switch (action.action) {
+                      case 'create':
+                        if (action.shapes?.length) {
+                          executeShapes(action.shapes)
+                          console.log(`Batch: Created ${action.shapes.length} shapes`)
+                        }
+                        break
+                      case 'edit':
+                        if (action.id && action.props) {
+                          editorController.updateShape(action.id, action.props)
+                          console.log(`Batch: Updated shape ${action.id}`)
+                        }
+                        break
+                      case 'delete':
+                        if (action.ids?.length) {
+                          editorController.deleteShapes(action.ids)
+                          console.log(`Batch: Deleted ${action.ids.length} shapes`)
+                        }
+                        break
+                      case 'delete_all':
+                        editorController.deleteAll()
+                        console.log('✅ Batch: Cleared canvas')
+                        break
+                    }
+                  } catch (err) {
+                    console.error('Batch action failed:', err)
+                  }
                 }
               }
               break
               
             default:
-              console.log('ℹ️ Server action processed:', data.execution.action)
+              console.log('Server action processed:', data.execution.action)
           }
           
         } catch (err) {
-          console.error('❌ Error executing server instructions:', err)
+          console.error('Error executing server instructions:', err)
         }
       }
       
@@ -335,25 +344,25 @@ export default function CanvasAssistant({
                   {m.complexity}
                 </span>
                 {m.usedTools && (
-                  <span className="text-slate-500">🔧 tools used</span>
+                  <span className="text-slate-500">tools used</span>
                 )}
               </div>
             )}
           </div>
         ))}
       </div>
-
+ {(loading || isProcessing) && (
+        <div className="px-4 py-2 text-xs text-slate-500 bg-slate-50 border-t">
+        Processing your request...
+        </div>
+      )}
      <AI_Input
         value={text}
         onChange={setText}
         onSubmit={handleSend}
       />
       
-      {(loading || isProcessing) && (
-        <div className="px-4 py-2 text-xs text-slate-500 bg-slate-50 border-t">
-          ⏳ Processing your request...
-        </div>
-      )}
+     
     </aside>
   )
 }

@@ -2,22 +2,25 @@
 
 import { useCallback, useState, useRef } from 'react'
 
-// Simple cache to prevent duplicate requests
 interface CacheEntry {
   message: string
-  canvasSnapshot: string // stringified snapshot
+  canvasSnapshot: string
   response: unknown
   timestamp: number
 }
 
-const CACHE_DURATION = 10000 // 10 seconds
+const CACHE_DURATION = 10000 
 
 export default function useChatApi() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cacheRef = useRef<CacheEntry | null>(null)
 
-  const sendMessage = useCallback(async (message: string, canvasSnapshot?: Array<{id: string, type: string, x?: number, y?: number, props?: Record<string, unknown>}>) => {
+  const sendMessage = useCallback(async (
+    message: string, 
+    canvasSnapshot?: Array<{id: string, type: string, x?: number, y?: number, props?: Record<string, unknown>}>,
+    canvasImage?: string
+  ) => {
     // Check cache
     const snapshotKey = JSON.stringify(canvasSnapshot || [])
     const now = Date.now()
@@ -36,7 +39,7 @@ export default function useChatApi() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, canvasSnapshot }),
+        body: JSON.stringify({ message, canvasSnapshot, canvasImage }),
       })
       if (!res.ok) {
         const text = await res.text()

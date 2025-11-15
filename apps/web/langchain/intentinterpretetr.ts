@@ -41,11 +41,8 @@ export async function processIntent(raw: unknown): Promise<ProcessResult> {
           return { ok: false, error: "Too many shapes (max 50)" };
         }
         
-        // Prepare shapes with IDs for client execution
-        // TLDraw requires shape IDs to start with "shape:"
         const shapesWithIds = intent.shapes.map((s) => {
           let shapeId = s.id ?? `shape:${Math.random().toString(36).slice(2, 9)}`;
-          // Ensure ID starts with "shape:"
           if (!shapeId.startsWith("shape:")) {
             shapeId = `shape:${shapeId}`;
           }
@@ -68,7 +65,6 @@ export async function processIntent(raw: unknown): Promise<ProcessResult> {
         if (!intent.id || !intent.props) {
           return { ok: false, error: "Edit requires id and props" };
         }
-        // Ensure ID starts with "shape:"
         let shapeId = intent.id;
         if (!shapeId.startsWith("shape:")) {
           shapeId = `shape:${shapeId}`;
@@ -102,8 +98,6 @@ export async function processIntent(raw: unknown): Promise<ProcessResult> {
         return { 
           ok: true, 
           action: "delete_all", 
-          requiresConfirmation: true, 
-          message: "This will clear the entire canvas. Are you sure?",
           reply: intent.reply 
         };
       }
@@ -113,7 +107,6 @@ export async function processIntent(raw: unknown): Promise<ProcessResult> {
           return { ok: false, error: "Batch requires actions array" };
         }
         
-        // Process each action in the batch
         const processedActions = [];
         for (const action of intent.actions) {
           const result = await processIntent(action);

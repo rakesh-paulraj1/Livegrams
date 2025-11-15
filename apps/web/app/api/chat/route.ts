@@ -7,9 +7,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const body = await request.json()
         const message = body?.message || ''
         const canvasSnapshot = body?.canvasSnapshot || []
+        const canvasImage = body?.canvasImage // Optional base64 image
 
         try {
-                const agentResult = await runCanvasAgent(message, canvasSnapshot)
+                const agentResult = await runCanvasAgent(message, canvasSnapshot, canvasImage)
                 console.log('Agent result:', agentResult)
                 if (!agentResult.success || !agentResult.intent) {
                         return NextResponse.json({ 
@@ -21,9 +22,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
                
                 const execution = await processIntent(agentResult.intent)
-                console.log('✅ Processed execution:', execution)
+                console.log('Processed execution:', execution)
 
-                // Return combined response
                 const response = {
                         success: true,
                         complexity: agentResult.complexity,

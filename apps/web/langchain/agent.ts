@@ -1,18 +1,84 @@
 "use server"
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { StateGraph, END, START, Annotation } from "@langchain/langgraph";
-import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { CanvasShape } from "./lib/editorcontroller";
-import { canvasTools } from "./tools/canvas-tools";
-import { tldraw_docs_retrieve } from "./tools/retriver";
+import { z } from "zod";
 
+const TLDRAW_SCHEMA = `
+# TLDraw Canvas Capabilities
+
+## Available Shape Types:
+1. **geo** - Geometric shapes: rectangle, ellipse, triangle, diamond, pentagon, hexagon, octagon, star, rhombus, cloud, trapezoid, arrow-right, arrow-left, arrow-up, arrow-down, x-box, check-box
+2. **arrow** - Arrows connecting points or shapes
+3. **text** - Text labels
+4. **line** - Free-form lines
+5. **draw** - Hand-drawn strokes
+6. **note** - Sticky notes
+7. **frame** - Grouping frames
+8. **highlight** - Highlighting overlays
+
+## Shape Properties:
+- Geo: {geo, w, h, color, fill, dash, size, text?}
+- Arrow: {start: {x, y}, end: {x, y}, color, arrowheadStart, arrowheadEnd, bend, labelColor, size, font}
+  IMPORTANT: Arrows do NOT support a "text" property. Use a separate text shape for labels.
+- Text: {text, color, size, font, w}
+- Colors: black, blue, red, green, yellow, orange, violet, grey
+- Fill: none, semi, solid, pattern
+- Dash: draw, solid, dashed, dotted
+- Size: s, m, l, xl
+`;
+
+const createPropsSchema = () => z.object({
+  geo: z.string().optional(),
+  w: z.number().optional(),
+  h: z.number().optional(),
+  color: z.string().optional(),
+  fill: z.string().optional(),
+  dash: z.string().optional(),
+  size: z.string().optional(),
+  text: z.string().optional(),
+  font: z.string().optional(),
+  start: z.object({ x: z.number(), y: z.number() }).optional(),
+  end: z.object({ x: z.number(), y: z.number() }).optional(),
+  arrowheadStart: z.string().optional(),
+  arrowheadEnd: z.string().optional(),
+  bend: z.number().optional(),
+  labelColor: z.string().optional()
+});
+
+const createShapeSchema = () => z.object({
+  id: z.string().optional(),
+  type: z.string(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  props: createPropsSchema().optional()
+});
+
+const ActionSchema: z.ZodType = z.lazy(() => z.object({
+  intent: z.enum(["create", "edit", "delete", "delete_all"]),
+  shapes: z.array(createShapeSchema()).optional(),
+  id: z.string().optional(),
+  props: createPropsSchema().optional(),
+  ids: z.array(z.string()).optional(),
+  reply: z.string().optional()
+}));
+
+const ModelIntentSchema = z.object({
+  intent: z.enum(["create", "edit", "delete", "delete_all", "batch"]),
+  shapes: z.array(createShapeSchema()).optional(),
+  id: z.string().optional(),
+  props: createPropsSchema().optional(),
+  ids: z.array(z.string()).optional(),
+  actions: z.array(ActionSchema).optional(),
+  reply: z.string().optional()
+});
 
 const AgentState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
     reducer: (x, y) => x.concat(y),
   }),
-userRequest: Annotation<string>({
+  userRequest: Annotation<string>({
     reducer: (x, y) => y ?? x,
   }),
   canvasSnapshot: Annotation<CanvasShape[]>({
@@ -24,27 +90,70 @@ userRequest: Annotation<string>({
   finalIntent: Annotation<Record<string, unknown> | null>({
     reducer: (x, y) => y ?? x,
   }),
+  reflectionCount: Annotation<number>({
+    reducer: (x, y) => y ?? x,
+    default: () => 0,
+  }),
 });
 
-
+type State = typeof AgentState.State;
 const model = new ChatGoogleGenerativeAI({
-  model: "gemini-2.5-flash",
+  model: "gemini-2.5-pro",
   apiKey: process.env.GEMINI_API_KEY!,
   temperature: 0.1,
 });
+const structuredModel = model.withStructuredOutput(ModelIntentSchema, {
+  name: "canvas_intent",
+  includeRaw: false
+});
 
-const allTools = [...canvasTools, tldraw_docs_retrieve];
-const modelWithTools = model.bindTools(allTools);
+function formatCanvasSummary(shapes: CanvasShape[]): string {
+  if (shapes.length === 0) return "Empty canvas";
+  return `Current canvas (${shapes.length} shapes - avoid overlapping):\n${
+    shapes.map(s => `${s.id}: ${s.type} at (${s.x}, ${s.y})`).join("\n")
+  }`;
+}
 
+function createUserMessage(state: State): string {
+  const summary = formatCanvasSummary(state.canvasSnapshot);
+  const textContent = `${summary}\n\nUser: "${state.userRequest}"`;
+  return textContent;
+}
 
-async function classifyRequest(state: typeof AgentState.State) {
+function shouldContinueReflection(state: State): string {
+  console.log('ROUTING: shouldContinueReflection - messages:', state.messages.length, 'reflectionCount:', state.reflectionCount);
+  if (state.messages.length > 4) {
+    console.log('ROUTING: Ending (message limit reached)');
+    return END;
+  }
+  
+  const lastMessage = state.messages[state.messages.length - 1]?.content || "";
+  if (typeof lastMessage === 'string' && lastMessage.includes("APPROVED")) {
+    console.log('ROUTING: Ending (APPROVED)');
+    return END;
+  }
+  
+  const next = state.complexity === "simple" ? "reflect_simple" : "reflect_complex";
+  console.log('ROUTING: Continue to', next);
+  return next;
+}
+
+async function classifyRequest(state: State) {
+  console.log('NODE: classifier - Starting classification');
+  console.log('userRequest:', state.userRequest);
+  console.log('canvasSnapshot:', state.canvasSnapshot?.length);
+  
+  if (!state.userRequest || state.userRequest.trim() === '') {
+    console.error('Empty userRequest in classifier');
+    throw new Error('User request is empty');
+  }
+  
   const systemPrompt = `You are a canvas operation classifier. Analyze the user's request and determine if it's simple or complex.
 
 SIMPLE operations (no tools needed):
 - Single shape creation: "add a circle", "create blue rectangle"
 - Simple edits: "move rect_1 to x=200", "change color to red"
 - Single deletions: "delete shape_1", "remove the circle"
-- Clear canvas: "delete everything"
 
 COMPLEX operations (need tools):
 - Flowcharts: "create a login flowchart", "draw process flow"
@@ -57,14 +166,15 @@ Respond with JSON: {"complexity": "simple"|"complex", "reasoning": "..."}`;
 
   const response = await model.invoke([
     { role: "system", content: systemPrompt },
-    { role: "user", content: `Request: "${state.userRequest}` }
+    { role: "user", content: `Request: "${state.userRequest}"` }
   ]);
 
   const content = response.content as string;
   const jsonMatch = content.match(/\{[\s\S]*?\}/);
   const classification = jsonMatch ? JSON.parse(jsonMatch[0]) : { complexity: "simple" };
 
-  console.log("Classification:", classification);
+  console.log("Classification:", classification.complexity);
+  console.log('NODE: classifier - Complete');
 
   return {
     complexity: classification.complexity,
@@ -72,304 +182,236 @@ Respond with JSON: {"complexity": "simple"|"complex", "reasoning": "..."}`;
   };
 }
 
+async function handleOperation(state: State, isComplex: boolean) {
+  const basePrompt = `You are a canvas intent generator. Analyze the user's request and generate the appropriate intent.
 
-async function handleSimpleOperation(state: typeof AgentState.State) {
-  const systemPrompt = `You are a canvas intent generator. You MUST respond with ONLY valid JSON, no other text.
-
-**CRITICAL: Response Format**
-- Output ONLY the JSON object
-- No markdown code blocks
-- No explanations before or after
-- Valid JSON syntax with proper quotes and no trailing commas
+${TLDRAW_SCHEMA}
 
 Available intents:
-- create: Add new shape(s)
-- edit: Modify existing shape properties
-- delete: Remove specific shape(s)
+- create: Add new shapes to canvas
+- edit: Modify existing shape properties  
+- delete: Remove specific shapes by ID
 - delete_all: Clear entire canvas
+${isComplex ? "- batch: Execute multiple operations in sequence" : ""}
 
-**CRITICAL: Intent Structure**
-All responses MUST use this exact structure:
+CRITICAL Rules:
+- ALWAYS include the "props" object for every shape with ALL required properties
+- For geo shapes: MUST include {geo: "shape-type", w: number, h: number, color: string}
+- For arrow shapes: MUST include {start: {x, y}, end: {x, y}, color: string}
+- For text shapes: MUST include {text: string, color: string, size: string}
+- Default position for first shape: x=200, y=200
+- Space multiple shapes 150px apart
+- Always include a friendly reply message
 
-CREATE Intent:
+Example geo shape:
+{"type": "geo", "x": 200, "y": 200, "props": {"geo": "rectangle", "w": 100, "h": 80, "color": "blue"}}
+
+Example arrow shape:
+{"type": "arrow", "x": 300, "y": 200, "props": {"start": {"x": 300, "y": 200}, "end": {"x": 300, "y": 350}, "color": "black"}}`;
+
+  const complexPrompt = isComplex ? `
+For complex operations - FLOWCHARTS:
+- Create boxes with text labels inside them (use "text" property in geo props)
+- Use vertical spacing of 150px between boxes (box bottom to next box top)
+- Arrows MUST connect box edges properly:
+  * For vertical flow: Arrow start.y = box1.y + (h/2), Arrow end.y = box2.y - (h/2)
+  * Arrow start.x and end.x = box center (box.x + w/2)
+- CRITICAL: Every shape MUST have complete "props" with all required properties
+- Include all shapes (boxes AND arrows) in a single create intent
+
+COMPLETE FLOWCHART EXAMPLE (3 boxes connected vertically):
 {
   "intent": "create",
   "shapes": [
-    {"type": "geo", "x": 200, "y": 200, "props": {"geo": "rectangle", "w": 100, "h": 100, "color": "blue"}}
+    {"type": "geo", "x": 200, "y": 100, "props": {"geo": "rectangle", "w": 120, "h": 60, "color": "blue", "fill": "solid", "text": "Start"}},
+    {"type": "arrow", "x": 260, "y": 130, "props": {"start": {"x": 260, "y": 160}, "end": {"x": 260, "y": 250}, "color": "black", "arrowheadEnd": "arrow"}},
+    {"type": "geo", "x": 200, "y": 250, "props": {"geo": "rectangle", "w": 120, "h": 60, "color": "blue", "fill": "solid", "text": "Process"}},
+    {"type": "arrow", "x": 260, "y": 280, "props": {"start": {"x": 260, "y": 310}, "end": {"x": 260, "y": 400}, "color": "black", "arrowheadEnd": "arrow"}},
+    {"type": "geo", "x": 200, "y": 400, "props": {"geo": "rectangle", "w": 120, "h": 60, "color": "blue", "fill": "solid", "text": "End"}}
   ],
-  "reply": "Created a blue rectangle"
+  "reply": "Created a flowchart with 3 connected steps"
 }
 
-EDIT Intent:
-{
-  "intent": "edit",
-  "id": "shape:abc123",
-  "props": {"x": 300, "color": "red"},
-  "reply": "Moved and changed color"
-}
+Arrow calculation formula for vertical flowcharts:
+- Box1 at (x=200, y=100, w=120, h=60) → center x = 200 + 60 = 260, bottom = 100 + 60 = 160
+- Box2 at (x=200, y=250, w=120, h=60) → center x = 260, top = 250
+- Arrow: start = {x: 260, y: 160}, end = {x: 260, y: 250}` : "";
 
-DELETE Intent:
-{
-  "intent": "delete",
-  "ids": ["shape:abc123", "shape:def456"],
-  "reply": "Deleted 2 shapes"
-}
+  const systemPrompt = basePrompt + complexPrompt;
+  const userMessage = createUserMessage(state);
 
-DELETE_ALL Intent:
-{
-  "intent": "delete_all",
-  "reply": "Cleared the canvas"
-}
-
-Shape types and properties:
-1. geo: Geometric shapes
-   - props.geo: "rectangle" | "ellipse" | "triangle" | "diamond"
-   - props.w, props.h: dimensions (default 100)
-   - props.color: "black" | "blue" | "red" | "green" | "yellow"
-2. text: Text boxes
-   - props.text: string content
-   - props.size: "s" | "m" | "l" | "xl"
-   - props.color: color name
-3. arrow: Connecting lines
-   - props.start: {x, y}
-   - props.end: {x, y}
-   - props.color: color name
-
-Default positioning:
-- First shape: x=200, y=200
-- Additional shapes: offset by 150px to right
-
-**REMEMBER:** Always use "intent" field with value "create", "edit", "delete", or "delete_all"`;
-
-  const canvasSummary = state.canvasSnapshot.length > 0
-    ? `Existing shapes: ${state.canvasSnapshot.map(s => `${s.id}(${s.type})`).join(", ")}`
-    : "Empty canvas";
-
-  const response = await model.invoke([
+  const intent = await structuredModel.invoke([
     { role: "system", content: systemPrompt },
-    { role: "user", content: `${canvasSummary}\n\nUser: "${state.userRequest}"` }
+    { role: "user", content: userMessage }
   ]);
 
-  const content = response.content as string;
-  console.log("Simple handler response:", content);
+  console.log(`${isComplex ? 'Complex' : 'Simple'} intent generated:`, intent);
   
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    console.error("No JSON found in response");
-    return {
-      finalIntent: { intent: "error", reply: "Could not parse response" },
-      messages: [new AIMessage(content)]
-    };
-  }
-  const jsonStr = jsonMatch[0]
-    .replace(/,(\s*[}\]])/g, '$1')  
-    .replace(/```json/g, '')        
-    .replace(/```/g, '')            
-    .replace(/\n/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  
-  console.log("🔧 Cleaned JSON:", jsonStr);
-  
-  try {
-    const intent = JSON.parse(jsonStr);
-    console.log("✅ Simple intent:", intent);
-    
-    return {
-      finalIntent: intent,
-      messages: [new AIMessage(content)]
-    };
-  } catch (parseError) {
-    console.error(" JSON parse error:", parseError);
-    console.error("Raw content:", content);
-    console.error(" Attempted to parse:", jsonStr);
-    
-    return {
-      finalIntent: { intent: "error", reply: "Invalid JSON response" },
-      messages: [new AIMessage(content)]
-    };
-  }
-}
-
-
-async function handleComplexOperation(state: typeof AgentState.State) {
-  const systemPrompt = `You are an advanced canvas agent with access to tools. Use them to create complex layouts.
-
-**CRITICAL: Final Response Format**
-When you have all information, respond with:
-FINAL_INTENT: {valid JSON object}
-
-- The JSON must be valid with no trailing commas
-- Use double quotes for all strings
-- No markdown code blocks in the JSON itself
-
-WORKFLOW FOR COMPLEX OPERATIONS:
-1. Use get_canvas_state(detailed=true) to understand current canvas
-2. Use analyze_layout for flowcharts/diagrams to get positioning
-3. Use search_editor_docs if you need TLDraw-specific features
-4. Use calculate_arrow_path to connect shapes
-5. Generate final structured intent
-
-**CRITICAL: Intent Structure for Complex Operations**
-You MUST return a CREATE intent with ALL shapes in the shapes array:
-
-{
-  "intent": "create",
-  "shapes": [
-    {"type": "geo", "x": 200, "y": 100, "props": {"geo": "rectangle", "w": 140, "h": 70, "text": "Start"}},
-    {"type": "geo", "x": 200, "y": 220, "props": {"geo": "rectangle", "w": 140, "h": 70, "text": "Process"}},
-    {"type": "arrow", "props": {"start": {"x": 270, "y": 170}, "end": {"x": 270, "y": 220}}}
-  ],
-  "reply": "Created flowchart with 2 boxes and connector"
-}
-
-FLOWCHART EXAMPLE:
-User: "create login flowchart"
-1. Call analyze_layout(operation="flowchart", shapeCount=4)
-2. Get positions: [{x:100,y:100}, {x:100,y:200}, ...]
-3. Create nodes at those positions
-4. Use calculate_arrow_path between consecutive nodes
-5. Return CREATE intent with all shapes (boxes AND arrows) in the shapes array
-
-When you have all information, respond with:
-FINAL_INTENT: {"intent": "create", "shapes": [...], "reply": "..."}`;
-
-  const messages: BaseMessage[] = [
-    new AIMessage(systemPrompt),
-    new AIMessage(`Canvas: ${state.canvasSnapshot.length} shapes\nRequest: "${state.userRequest}"`)
-  ];
-
-  let continueLoop = true;
-  let iterations = 0;
-  const maxIterations = 5;
-
-  while (continueLoop && iterations < maxIterations) {
-    iterations++;
-    
-    const response = await modelWithTools.invoke(messages, {
-      configurable: { canvasShapes: state.canvasSnapshot }
-    });
-
-    messages.push(response);
-
- 
-    if (response.tool_calls && response.tool_calls.length > 0) {
-      console.log(`🔧 Iteration ${iterations}: Model calling ${response.tool_calls.length} tool(s)`);
-      
-      const toolNode = new ToolNode(allTools);
-      const toolResults = await toolNode.invoke({ 
-        messages: [response] 
-      }, {
-        configurable: { canvasShapes: state.canvasSnapshot }
-      });
-      
-      messages.push(...toolResults.messages);
-      
-    } else {
-      continueLoop = false;
-      
-      const content = response.content as string;
-      console.log("Complex handler response:", content);
-      if (content.includes("FINAL_INTENT:")) {
-        const parts = content.split("FINAL_INTENT:");
-        if (parts[1]) {
-          const intentJson = parts[1].trim();
-          const jsonMatch = intentJson.match(/\{[\s\S]*\}/);
-        
-          if (jsonMatch) {
-            const jsonStr = jsonMatch[0]
-              .replace(/,(\s*[}\]])/g, '$1') 
-              .replace(/```json/g, '')       
-              .replace(/```/g, '')
-              .replace(/\n/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-            
-            console.log("🔧 Cleaned JSON (FINAL_INTENT):", jsonStr);
-            
-            try {
-              const intent = JSON.parse(jsonStr);
-              console.log("🎯 Complex intent:", intent);
-              
-              return {
-                finalIntent: intent,
-                messages: [new AIMessage(content)]
-              };
-            } catch (parseError) {
-              console.error("JSON parse error (FINAL_INTENT):", parseError);
-              console.error("Attempted to parse:", jsonStr);
-            }
-          }
-        }
-      }
-      
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonStr = jsonMatch[0]
-          .replace(/,(\s*[}\]])/g, '$1')
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .replace(/\n/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        
-        console.log("🔧 Cleaned JSON (fallback):", jsonStr);
-        
-        try {
-          const intent = JSON.parse(jsonStr);
-          console.log("Complex intent (fallback):", intent);
-          return {
-            finalIntent: intent,
-            messages: [new AIMessage(content)]
-          };
-        } catch (parseError) {
-          console.error("❌ JSON parse error (fallback):", parseError);
-          console.error("📄 Raw content:", content);
-          console.error("🔍 Attempted to parse:", jsonStr);
-        }
-      }
-    }
-  }
-
-  // Fallback if loop exits without intent
-  console.warn("⚠️ Complex handler exited without generating intent");
   return {
-    finalIntent: { 
-      intent: "error", 
-      reply: "Could not generate intent after tool usage" 
-    },
-    messages: [new AIMessage("Operation too complex")]
+    finalIntent: intent,
+    messages: [new AIMessage(JSON.stringify(intent))],
+    reflectionCount: 0
   };
 }
 
-
-function routeByComplexity(state: typeof AgentState.State): string {
-  return state.complexity === "simple" ? "simple_handler" : "complex_handler";
+async function handleSimpleOperation(state: State) {
+  console.log('🔵 NODE: simple_handler - Starting');
+  const result = await handleOperation(state, false);
+  console.log('✅ NODE: simple_handler - Complete');
+  return result;
 }
 
+async function handleComplexOperation(state: State) {
+  console.log('🔵 NODE: complex_handler - Starting');
+  const result = await handleOperation(state, true);
+  console.log('✅ NODE: complex_handler - Complete');
+  return result;
+}
+
+async function reflect(state: State, isComplex: boolean) {
+  const baseChecks = `
+1. **Correctness**: Does the intent match the user's request?
+2. **Positioning**: Are shapes positioned appropriately? Check for overlaps with existing shapes.
+3. **Properties**: Are all required properties (geo type, size, color) specified correctly?
+4. **Completeness**: Is anything missing?`;
+
+  const complexChecks = isComplex ? `
+5. **Layout Logic**: Are shapes arranged in a logical flow?
+6. **Spacing**: Is spacing consistent (120-150px vertical, 200-250px horizontal)?
+7. **Arrows**: Do arrows properly connect shape centers?
+8. **Batch Usage**: Should this use batch intent to clear old shapes first?
+9. **Text Labels**: Do flowchart boxes have descriptive text labels?
+10. **Arrow Connections**: Are arrow start/end coordinates calculated correctly to connect box edges?` : "";
+
+  const batchCheck = state.canvasSnapshot.length > 0 ? `\n\nIMPORTANT: Canvas has ${state.canvasSnapshot.length} existing shapes. Consider if batch intent should be used to:
+- Clear old shapes first (delete or delete_all)
+- Then create new shapes
+Example: {"intent": "batch", "actions": [{"intent": "delete_all"}, {"intent": "create", "shapes": [...]}]}` : "";
+
+  const reflectionPrompt = `You are a canvas intent validator. Review the generated intent and provide critique.
+
+Check for:${baseChecks}${complexChecks}${batchCheck}
+
+User request: "${state.userRequest}"
+Canvas state: ${state.canvasSnapshot.length} existing shapes
+${state.canvasSnapshot.map(s => `${s.id}: ${s.type} at (${s.x}, ${s.y})`).join(", ")}
+
+Generated intent: ${JSON.stringify(state.finalIntent, null, 2)}
+
+Provide specific recommendations for improvement, or respond "APPROVED" if the intent is correct.`;
+
+  const critique = await model.invoke([
+    { role: "system", content: reflectionPrompt }
+  ]);
+
+  // Ensure content is always a string
+  let content = '';
+  if (typeof critique.content === 'string') {
+    content = critique.content;
+  } else if (Array.isArray(critique.content)) {
+    content = critique.content.map(item => 
+      typeof item === 'string' ? item : JSON.stringify(item)
+    ).join(' ');
+  } else {
+    content = JSON.stringify(critique.content);
+  }
+  
+  console.log(`${isComplex ? 'Complex' : 'Simple'} reflection:`, content.substring(0, 100));
+
+  return {
+    messages: [new AIMessage(content)],
+    reflectionCount: (state.reflectionCount || 0) + 1
+  };
+}
+
+async function reflectSimple(state: State) {
+  console.log('🔵 NODE: reflect_simple - Starting');
+  const result = await reflect(state, false);
+  console.log('✅ NODE: reflect_simple - Complete');
+  return result;
+}
+
+async function reflectComplex(state: State) {
+  console.log('🔵 NODE: reflect_complex - Starting');
+  const result = await reflect(state, true);
+  console.log('✅ NODE: reflect_complex - Complete');
+  return result;
+}
+
+async function refine(state: State) {
+  console.log('🔵 NODE: refine - Starting (reflection count:', state.reflectionCount, ')');
+  const lastCritique = state.messages[state.messages.length - 1]?.content || "";
+  
+  const refinePrompt = `Based on the critique, generate an improved intent that addresses all feedback.
+
+Original user request: "${state.userRequest}"
+Previous intent: ${JSON.stringify(state.finalIntent, null, 2)}
+Critique: ${lastCritique}
+
+Generate a refined intent that fixes all issues mentioned in the critique.`;
+
+  const canvasSummary = formatCanvasSummary(state.canvasSnapshot);
+
+  const intent = await structuredModel.invoke([
+    { role: "system", content: refinePrompt },
+    { role: "user", content: canvasSummary }
+  ]);
+
+  console.log("Refined intent:", intent);
+  console.log('✅ NODE: refine - Complete');
+
+  return {
+    finalIntent: intent,
+    messages: [new AIMessage(JSON.stringify(intent))]
+  };
+}
+
+function routeByComplexity(state: State): string {
+  const route = state.complexity === "simple" ? "simple_handler" : "complex_handler";
+  console.log('🔀 ROUTING: routeByComplexity ->', route);
+  return route;
+}
 
 const workflow = new StateGraph(AgentState)
   .addNode("classifier", classifyRequest)
   .addNode("simple_handler", handleSimpleOperation)
+  .addNode("reflect_simple", reflectSimple)
+  .addNode("refine_simple", refine)
   .addNode("complex_handler", handleComplexOperation)
+  .addNode("reflect_complex", reflectComplex)
+  .addNode("refine_complex", refine)
   .addEdge(START, "classifier")
   .addConditionalEdges("classifier", routeByComplexity, {
     simple_handler: "simple_handler",
     complex_handler: "complex_handler"
   })
-  .addEdge("simple_handler", END)
-  .addEdge("complex_handler", END);
+  .addConditionalEdges("simple_handler", shouldContinueReflection, {
+    reflect_simple: "reflect_simple",
+    [END]: END
+  })
+  .addEdge("reflect_simple", "refine_simple")
+  .addConditionalEdges("refine_simple", shouldContinueReflection, {
+    reflect_simple: "reflect_simple",
+    [END]: END
+  })
+  .addConditionalEdges("complex_handler", shouldContinueReflection, {
+    reflect_complex: "reflect_complex",
+    [END]: END
+  })
+  .addEdge("reflect_complex", "refine_complex")
+  .addConditionalEdges("refine_complex", shouldContinueReflection, {
+    reflect_complex: "reflect_complex",
+    [END]: END
+  });
 
 const graph = workflow.compile();
-
-
 
 export async function runCanvasAgent(
   userRequest: string,
   canvasSnapshot: CanvasShape[] = []
 ) {
   try {
-    console.log("\n=== CANVAS AGENT STARTING ===");
+    console.log("\nCANVAS AGENT STARTING");
     console.log("Request:", userRequest);
     console.log("Canvas:", canvasSnapshot.length, "shapes");
 
@@ -378,12 +420,12 @@ export async function runCanvasAgent(
       canvasSnapshot,
       messages: [],
       complexity: "simple",
-      finalIntent: null
+      finalIntent: null,
+      reflectionCount: 0
     });
 
-    console.log("=== AGENT COMPLETE ===");
+    console.log("AGENT COMPLETE");
     console.log("Complexity:", result.complexity);
-    console.log("Intent:", result.finalIntent);
 
     return {
       success: true,
@@ -394,7 +436,7 @@ export async function runCanvasAgent(
     };
 
   } catch (error: unknown) {
-    console.error("=== AGENT ERROR ===", error);
+    console.error("AGENT ERROR:", error);
     
     return {
       success: false,

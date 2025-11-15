@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-const BaseIntent = z.object({});
-
 const CreateShape = z.object({
   intent: z.literal("create"),
   shapes: z.array(

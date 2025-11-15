@@ -25,8 +25,18 @@ export class EditorController {
 
   getShapes(): CanvasShape[] {
     try {
-      return this.getEditor()?.getShapes?.() ?? [];
-    } catch {
+      const editor = this.getEditor();
+      const shapes = editor.getCurrentPageShapes();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return shapes.map((shape: any) => ({
+        id: shape.id,
+        type: shape.type,
+        x: shape.x,
+        y: shape.y,
+        props: shape.props
+      }));
+    } catch (err) {
+      console.error('Error getting shapes:', err);
       return [];
     }
   }
@@ -44,7 +54,37 @@ export class EditorController {
   }
 
   deleteAll() {
-    const ids = this.getShapes().map((s) => s.id);
-    if (ids.length) this.deleteShapes(ids);
+    console.log('🗑️ deleteAll() called')
+    const shapes = this.getShapes();
+    console.log(`Found ${shapes.length} shapes on canvas`)
+    const ids = shapes.map((s) => s.id);
+    console.log('Shape IDs to delete:', ids)
+    if (ids.length) {
+      console.log(`Deleting ${ids.length} shapes...`)
+      this.deleteShapes(ids);
+      console.log('Delete operation completed')
+    } else {
+      console.log('Canvas is already empty')
+    }
+  }
+
+
+  async getCanvasImage(): Promise<string> {
+    const editor = this.getEditor();
+
+    const shapes = editor.getCurrentPageShapes();
+    
+    if (shapes.length === 0) {
+      throw new Error('No shapes on canvas to capture');
+    }
+    
+    const result = await editor.toImageDataUrl(shapes, {
+      format: 'png', 
+      background: true,
+      padding: 16,
+      scale: 1,
+    });
+    
+    return result.url;
   }
 }
