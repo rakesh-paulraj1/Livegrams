@@ -7,7 +7,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const body = await request.json()
         const message = body?.message || ''
         const canvasSnapshot = body?.canvasSnapshot || []
-        const canvasImage = body?.canvasImage // Optional base64 image
+        const canvasImage = body?.canvasImage
 
         try {
                 const agentResult = await runCanvasAgent(message, canvasSnapshot, canvasImage)
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                
                 return NextResponse.json(response)
         } catch (err) {
-                console.error('❌ Agent error:', err)
+                console.error('Agent error:', err)
                 return NextResponse.json({ 
                         success: false, 
                         error: String(err),

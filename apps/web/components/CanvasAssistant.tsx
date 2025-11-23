@@ -13,17 +13,17 @@ function cn(...parts: Array<string | false | null | undefined>) {
 
 
 export default function CanvasAssistant({
-  className = 'w-[480px] border-l-2 border-slate-200 flex flex-col bg-white text-slate-800 shadow-sm',
+  className = 'w-full lg:w-[380px] border-l-2 border-slate-200 flex flex-col bg-white text-slate-800 shadow-sm',
   editor,
 }: {
   className?: string
-  // eslint-disable-next-line @typescriEpt-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   editor?: React.RefObject<any>
 }) {
   const editorController = useMemo(() => {
-    console.log('🔧 Initializing EditorController, editor ref:', editor)
+    console.log('Initializing EditorController, editor ref:', editor)
     const controller = editor ? new EditorController(editor) : null
-    console.log('🔧 EditorController created:', controller ? 'YES' : 'NO')
+    console.log('EditorController created:', controller ? 'YES' : 'NO')
     return controller
   }, [editor])
   const [messages, setMessages] = useState<{ id: number; text: string; from: 'user' | 'bot'; complexity?: 'simple' | 'complex'; usedTools?: boolean }[]>([
@@ -31,6 +31,7 @@ export default function CanvasAssistant({
   ])
   const [text, setText] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   const idRef = useRef(2)
   const listRef = useRef<HTMLDivElement | null>(null)
   const lastRequestRef = useRef<string>('')
@@ -41,11 +42,7 @@ export default function CanvasAssistant({
   }, [messages])
 
 
-
-
   const { sendMessage, loading } = useChatApi()
-
-
   
   const getCanvasSnapshot = (): CanvasShape[] => {
     if (!editorController) {
@@ -71,10 +68,9 @@ export default function CanvasAssistant({
 
   const executeShapes = (shapes: CanvasShape[]) => {
     if (!editorController) {
-      console.error('❌ No editorController available')
+      console.error('No editorController available')
       return false
     }
-    
     try {
       console.log('Executing shapes:', shapes)
       
@@ -90,11 +86,8 @@ export default function CanvasAssistant({
           y: s.y ?? 100,
           props: { ...s.props }
         }
-        
-        console.log('📦 Prepared shape:', shape)
         return shape
       })
-
       shapesToCreate.forEach(shape => {
         if (shape.type === 'geo') {
           if (!shape.props.geo) {
@@ -109,7 +102,6 @@ export default function CanvasAssistant({
             delete shape.props.text
           }
         }
-        
         if (shape.type === 'text') {
           if (shape.props.text && !shape.props.richText) {
             shape.props.richText = toRichText(String(shape.props.text))
@@ -123,7 +115,7 @@ export default function CanvasAssistant({
           const invalidProps = ['text', 'w', 'h', 'geo', 'fill', 'richText']
           invalidProps.forEach(prop => {
             if (shape.props[prop]) {
-              console.warn(`⚠️ Removing ${prop} property from arrow shape (not supported)`)
+              console.warn(`Removing ${prop} property from arrow shape (not supported)`)
               delete shape.props[prop]
             }
           })
@@ -145,7 +137,6 @@ export default function CanvasAssistant({
       return false
     }
   }
-
   async function handleSend(e?: React.FormEvent) {
     if (e) e.preventDefault()
     const trimmed = text.trim()
@@ -159,7 +150,6 @@ export default function CanvasAssistant({
       console.log('Please dont repeat message')
       return
     }
-    
     lastRequestRef.current = trimmed
     setIsProcessing(true)
     
@@ -174,7 +164,9 @@ export default function CanvasAssistant({
       if (editorController) {
         try {
           canvasImage = await editorController.getCanvasImage()
-          console.log('Canvas screenshot captured:', canvasImage.substring(0, 50) + '...')
+          console.log('Canvas screenshot captured:', canvasImage)
+          
+          setIsOpen(false)
         } catch (err) {
           console.warn('Could not capture canvas image:', err)
         }
@@ -191,7 +183,6 @@ export default function CanvasAssistant({
         complexity: data?.complexity,
         usedTools: data?.usedTools
       }])
-
     
       if (data?.execution && editorController) {
         try {
@@ -239,7 +230,7 @@ export default function CanvasAssistant({
               if (data.execution.ids?.length) {
                 try {
                   editorController.deleteShapes(data.execution.ids)
-                  console.log(`✅ Deleted ${data.execution.ids.length} shapes from server instructions`)
+                  console.log(`Deleted ${data.execution.ids.length} shapes from server instructions`)
                 } catch (err) {
                   console.error('Error deleting shapes:', err)
                 }
@@ -259,7 +250,7 @@ export default function CanvasAssistant({
               
             case 'batch':
               if (data.execution.actions?.length) {
-                console.log(`🔄 Executing batch with ${data.execution.actions.length} actions`)
+                console.log(`Executing batch with ${data.execution.actions.length} actions`)
                 for (const action of data.execution.actions) {
                   try {
                     switch (action.action) {
@@ -283,7 +274,7 @@ export default function CanvasAssistant({
                         break
                       case 'delete_all':
                         editorController.deleteAll()
-                        console.log('✅ Batch: Cleared canvas')
+                        console.log('Batch: Cleared canvas')
                         break
                     }
                   } catch (err) {
@@ -296,13 +287,11 @@ export default function CanvasAssistant({
             default:
               console.log('Server action processed:', data.execution.action)
           }
-          
         } catch (err) {
           console.error('Error executing server instructions:', err)
         }
       }
       
-   
       else if (data?.shapes?.length || data?.action || data?.intent) {
         console.error(' No EditorController available for shape operations')
         setMessages((s) => [...s, { 
@@ -321,8 +310,55 @@ export default function CanvasAssistant({
 
 
   return (
-    <aside className={className}>
-      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 font-semibold text-slate-700">Canvas Assistant</div>
+    <>
+     {!isOpen&& <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed top-4 right-4 z-50 bg-sky-600 text-white p-4 rounded-full shadow-lg hover:bg-sky-700 transition-colors"
+        aria-label="Toggle assistant"
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          className="h-6 w-6" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" 
+          />
+        </svg>
+      </button>
+}
+      <aside className={cn(
+        className,
+        'fixed lg:relative inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out',
+        isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+      )}>
+        <button
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden absolute top-4 right-4 z-10 text-slate-500 hover:text-slate-700"
+          aria-label="Close assistant"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-6 w-6" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M6 18L18 6M6 6l12 12" 
+            />
+          </svg>
+        </button>
+
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 font-semibold text-slate-700">Canvas Assistant</div>
 
       <div ref={listRef} className="p-4 overflow-y-auto flex-1 bg-white">
         {messages.map((m) => (
@@ -350,19 +386,26 @@ export default function CanvasAssistant({
             )}
           </div>
         ))}
+        {(loading || isProcessing) && (
+          <div className="mb-3 flex flex-col items-start">
+            <div className="bg-slate-100 text-slate-500 border border-slate-100 max-w-[80%] py-2 px-3 rounded-lg text-sm">
+              Processing your request...
+            </div>
+          </div>
+        )}
       </div>
- {(loading || isProcessing) && (
-        <div className="px-4 py-2 text-xs text-slate-500 bg-slate-50 border-t">
-        Processing your request...
-        </div>
+        <AI_Input
+          value={text}
+          onChange={setText}
+          onSubmit={handleSend}
+        />
+      </aside>
+      {isOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setIsOpen(false)}
+        />
       )}
-     <AI_Input
-        value={text}
-        onChange={setText}
-        onSubmit={handleSend}
-      />
-      
-     
-    </aside>
+    </>
   )
 }

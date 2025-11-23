@@ -54,7 +54,7 @@ export class EditorController {
   }
 
   deleteAll() {
-    console.log('🗑️ deleteAll() called')
+    console.log('deleteAll() called')
     const shapes = this.getShapes();
     console.log(`Found ${shapes.length} shapes on canvas`)
     const ids = shapes.map((s) => s.id);
@@ -77,14 +77,15 @@ export class EditorController {
     if (shapes.length === 0) {
       throw new Error('No shapes on canvas to capture');
     }
+  
+    const shapeIds = shapes.map((s: any) => s.id);
     
-    const result = await editor.toImageDataUrl(shapes, {
+    const result = await editor.toImageDataUrl(shapeIds, {
       format: 'png', 
       background: true,
-      padding: 16,
-      scale: 1,
+      padding: 32,
+      scale: 2,
     });
-    
     return result.url;
-  }
+  } 
 }

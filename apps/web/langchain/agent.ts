@@ -84,6 +84,9 @@ const AgentState = Annotation.Root({
   canvasSnapshot: Annotation<CanvasShape[]>({
     reducer: (x, y) => y ?? x,
   }),
+  canvasImage: Annotation<string | undefined>({
+    reducer: (x, y) => y ?? x,
+  }),
   complexity: Annotation<"simple" | "complex">({
     reducer: (x, y) => y ?? x,
   }),
@@ -114,28 +117,27 @@ function formatCanvasSummary(shapes: CanvasShape[]): string {
   }`;
 }
 
-function createUserMessage(state: State): string {
+function createUserMessage(state: State) {
   const summary = formatCanvasSummary(state.canvasSnapshot);
   const textContent = `${summary}\n\nUser: "${state.userRequest}"`;
+  
+  // Return message with optional image
+  if (state.canvasImage) {
+    return [
+      {
+        type: "text" as const,
+        text: textContent,
+      },
+      {
+        type: "image_url" as const,
+        image_url: {
+          url: state.canvasImage,
+        },
+      },
+    ];
+  }
+  
   return textContent;
-}
-
-function shouldContinueReflection(state: State): string {
-  console.log('ROUTING: shouldContinueReflection - messages:', state.messages.length, 'reflectionCount:', state.reflectionCount);
-  if (state.messages.length > 4) {
-    console.log('ROUTING: Ending (message limit reached)');
-    return END;
-  }
-  
-  const lastMessage = state.messages[state.messages.length - 1]?.content || "";
-  if (typeof lastMessage === 'string' && lastMessage.includes("APPROVED")) {
-    console.log('ROUTING: Ending (APPROVED)');
-    return END;
-  }
-  
-  const next = state.complexity === "simple" ? "reflect_simple" : "reflect_complex";
-  console.log('ROUTING: Continue to', next);
-  return next;
 }
 
 async function classifyRequest(state: State) {
@@ -255,16 +257,16 @@ Arrow calculation formula for vertical flowcharts:
 }
 
 async function handleSimpleOperation(state: State) {
-  console.log('🔵 NODE: simple_handler - Starting');
+  console.log('NODE: simple_handler - Starting');
   const result = await handleOperation(state, false);
-  console.log('✅ NODE: simple_handler - Complete');
+  console.log('NODE: simple_handler - Complete');
   return result;
 }
 
 async function handleComplexOperation(state: State) {
-  console.log('🔵 NODE: complex_handler - Starting');
+  console.log('NODE: complex_handler - Starting');
   const result = await handleOperation(state, true);
-  console.log('✅ NODE: complex_handler - Complete');
+  console.log('NODE: complex_handler - Complete');
   return result;
 }
 
@@ -304,7 +306,6 @@ Provide specific recommendations for improvement, or respond "APPROVED" if the i
     { role: "system", content: reflectionPrompt }
   ]);
 
-  // Ensure content is always a string
   let content = '';
   if (typeof critique.content === 'string') {
     content = critique.content;
@@ -324,100 +325,37 @@ Provide specific recommendations for improvement, or respond "APPROVED" if the i
   };
 }
 
-async function reflectSimple(state: State) {
-  console.log('🔵 NODE: reflect_simple - Starting');
-  const result = await reflect(state, false);
-  console.log('✅ NODE: reflect_simple - Complete');
-  return result;
-}
-
-async function reflectComplex(state: State) {
-  console.log('🔵 NODE: reflect_complex - Starting');
-  const result = await reflect(state, true);
-  console.log('✅ NODE: reflect_complex - Complete');
-  return result;
-}
-
-async function refine(state: State) {
-  console.log('🔵 NODE: refine - Starting (reflection count:', state.reflectionCount, ')');
-  const lastCritique = state.messages[state.messages.length - 1]?.content || "";
-  
-  const refinePrompt = `Based on the critique, generate an improved intent that addresses all feedback.
-
-Original user request: "${state.userRequest}"
-Previous intent: ${JSON.stringify(state.finalIntent, null, 2)}
-Critique: ${lastCritique}
-
-Generate a refined intent that fixes all issues mentioned in the critique.`;
-
-  const canvasSummary = formatCanvasSummary(state.canvasSnapshot);
-
-  const intent = await structuredModel.invoke([
-    { role: "system", content: refinePrompt },
-    { role: "user", content: canvasSummary }
-  ]);
-
-  console.log("Refined intent:", intent);
-  console.log('✅ NODE: refine - Complete');
-
-  return {
-    finalIntent: intent,
-    messages: [new AIMessage(JSON.stringify(intent))]
-  };
-}
-
-function routeByComplexity(state: State): string {
-  const route = state.complexity === "simple" ? "simple_handler" : "complex_handler";
-  console.log('🔀 ROUTING: routeByComplexity ->', route);
-  return route;
-}
-
 const workflow = new StateGraph(AgentState)
   .addNode("classifier", classifyRequest)
   .addNode("simple_handler", handleSimpleOperation)
-  .addNode("reflect_simple", reflectSimple)
-  .addNode("refine_simple", refine)
   .addNode("complex_handler", handleComplexOperation)
-  .addNode("reflect_complex", reflectComplex)
-  .addNode("refine_complex", refine)
   .addEdge(START, "classifier")
-  .addConditionalEdges("classifier", routeByComplexity, {
+  .addConditionalEdges("classifier", (state: State) => state.complexity === "simple" ? "simple_handler" : "complex_handler", {
     simple_handler: "simple_handler",
     complex_handler: "complex_handler"
   })
-  .addConditionalEdges("simple_handler", shouldContinueReflection, {
-    reflect_simple: "reflect_simple",
-    [END]: END
-  })
-  .addEdge("reflect_simple", "refine_simple")
-  .addConditionalEdges("refine_simple", shouldContinueReflection, {
-    reflect_simple: "reflect_simple",
-    [END]: END
-  })
-  .addConditionalEdges("complex_handler", shouldContinueReflection, {
-    reflect_complex: "reflect_complex",
-    [END]: END
-  })
-  .addEdge("reflect_complex", "refine_complex")
-  .addConditionalEdges("refine_complex", shouldContinueReflection, {
-    reflect_complex: "reflect_complex",
-    [END]: END
-  });
+  .addEdge("simple_handler", END)
+  .addEdge("complex_handler", END);
 
 const graph = workflow.compile();
 
 export async function runCanvasAgent(
   userRequest: string,
-  canvasSnapshot: CanvasShape[] = []
+  canvasSnapshot: CanvasShape[] = [],
+  canvasImage?: string
 ) {
   try {
     console.log("\nCANVAS AGENT STARTING");
     console.log("Request:", userRequest);
     console.log("Canvas:", canvasSnapshot.length, "shapes");
+    if (canvasImage) {
+      console.log("Canvas image provided, size:", canvasImage.length, "bytes");
+    }
 
     const result = await graph.invoke({
       userRequest,
       canvasSnapshot,
+      canvasImage,
       messages: [],
       complexity: "simple",
       finalIntent: null,

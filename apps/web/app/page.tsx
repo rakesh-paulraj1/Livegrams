@@ -39,7 +39,6 @@ export default function App() {
     }
   }, [isDialogOpen]);
 
-  // Load user's rooms when the modal/dialog opens — simple client fetch using session user email
   useEffect(() => {
     if (!isDialogOpen) return
     const email = session?.user?.email
@@ -50,7 +49,6 @@ export default function App() {
       setRoomsLoading(true)
       try {
         const res = await fetch(`/api/rooms`)
-        if (!res.ok) throw new Error('Failed to load rooms')
         const data = await res.json()
         if (!cancelled) setRooms(Array.isArray(data) ? data : [])
       } catch (err) {
@@ -220,7 +218,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Join Room Section */}
                     <div className="border border-gray-200 rounded-xl p-4 bg-white">
                       <div className="flex items-center mb-3">
                         <div className="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center mr-3">
@@ -229,7 +226,6 @@ export default function App() {
                         <h3 className="text-lg font-semibold text-gray-900">Join Existing Room</h3>
                       </div>
                       <p className="text-gray-600 text-sm mb-4">Enter a room ID to join an existing session</p>
-                      {/* If the user has rooms, show them for quick joining */}
                       {status === 'authenticated' && (
                         <div className="mb-3">
                           <p className="text-sm font-medium text-gray-800 mb-2">Your rooms</p>

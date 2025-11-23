@@ -59,7 +59,6 @@ wss.on("connection", function connection(ws, request) {
         return;
       }
 
-      // Broadcast to other clients in the same room
       let broadcastCount = 0;
       wss.clients.forEach((client) => {
         if (client !== ws && client.readyState === client.OPEN) {

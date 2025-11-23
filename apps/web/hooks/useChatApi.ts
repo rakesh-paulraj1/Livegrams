@@ -29,7 +29,7 @@ export default function useChatApi() {
         cacheRef.current.message === message &&
         cacheRef.current.canvasSnapshot === snapshotKey &&
         now - cacheRef.current.timestamp < CACHE_DURATION) {
-      console.log('📦 Using cached response')
+      console.log('Using cached response')
       return cacheRef.current.response
     }
 
@@ -47,7 +47,6 @@ export default function useChatApi() {
       }
       const data = await res.json()
       
-      // Cache the response
       cacheRef.current = {
         message,
         canvasSnapshot: snapshotKey,
