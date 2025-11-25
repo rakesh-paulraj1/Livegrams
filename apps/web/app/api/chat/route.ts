@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { runCanvasAgent } from '../../../langchain/agent'
+// import { runCanvasAgent } from '../../../langchain/agent'
+import { runCanvasAgent } from '../../../langchain/newagent'
 import { processIntent } from '../../../langchain/intentinterpretetr'
 import { NextRequest } from 'next/server'
 
@@ -26,7 +27,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
                 const response = {
                         success: true,
-                        complexity: agentResult.complexity,
                         usedTools: agentResult.usedTools,
                         intent: agentResult.intent,
                         reply: agentResult.reply,
