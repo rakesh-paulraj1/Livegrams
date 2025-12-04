@@ -121,7 +121,6 @@ function createUserMessage(state: State) {
   const summary = formatCanvasSummary(state.canvasSnapshot);
   const textContent = `${summary}\n\nUser: "${state.userRequest}"`;
   
-  // Return message with optional image
   if (state.canvasImage) {
     return [
       {

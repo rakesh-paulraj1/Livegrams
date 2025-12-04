@@ -71,9 +71,7 @@ export default function CanvasAssistant({
       console.error('No editorController available')
       return false
     }
-    try {
-      console.log('Executing shapes:', shapes)
-      
+    try {      
       const shapesToCreate = shapes.map(s => {
         const shapeId = s.id || `shape:${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         
@@ -84,24 +82,15 @@ export default function CanvasAssistant({
           type: s.type || 'geo',
           x: s.x ?? 100,
           y: s.y ?? 100,
+          rotation: 0,
+          opacity: 1,
           props: { ...s.props }
         }
         return shape
       })
+      
       shapesToCreate.forEach(shape => {
-        if (shape.type === 'geo') {
-          if (!shape.props.geo) {
-            shape.props.geo = 'rectangle'
-          }
-          if (!shape.props.w) shape.props.w = 100
-          if (!shape.props.h) shape.props.h = 100
-          if (!shape.props.color) shape.props.color = 'black'
-          
-          if (shape.props.text && !shape.props.richText) {
-            shape.props.richText = toRichText(String(shape.props.text))
-            delete shape.props.text
-          }
-        }
+        // Text shapes - convert text to richText
         if (shape.type === 'text') {
           if (shape.props.text && !shape.props.richText) {
             shape.props.richText = toRichText(String(shape.props.text))
@@ -109,8 +98,32 @@ export default function CanvasAssistant({
           }
           if (!shape.props.size) shape.props.size = 'm'
           if (!shape.props.color) shape.props.color = 'black'
+          if (!shape.props.font) shape.props.font = 'draw'
         }
         
+        // Geo shapes - ensure required properties
+        if (shape.type === 'geo') {
+          if (!shape.props.geo) {
+            shape.props.geo = 'rectangle'
+          }
+          if (!shape.props.w) shape.props.w = 100
+          if (!shape.props.h) shape.props.h = 100
+          if (!shape.props.color) shape.props.color = 'black'
+          if (!shape.props.fill) shape.props.fill = 'none'
+          if (!shape.props.dash) shape.props.dash = 'draw'
+          if (!shape.props.size) shape.props.size = 'm'
+          if (!shape.props.font) shape.props.font = 'draw'
+          if (!shape.props.align) shape.props.align = 'middle'
+          if (!shape.props.verticalAlign) shape.props.verticalAlign = 'middle'
+          if (shape.props.growY === undefined) shape.props.growY = 0
+          if (!shape.props.url) shape.props.url = ''
+          if (!shape.props.labelColor) shape.props.labelColor = 'black'
+          
+          // Convert text to empty string if not provided
+          if (!shape.props.text) shape.props.text = ''
+        }
+        
+        // Arrow shapes
         if (shape.type === 'arrow') {
           const invalidProps = ['text', 'w', 'h', 'geo', 'fill', 'richText']
           invalidProps.forEach(prop => {
@@ -121,6 +134,8 @@ export default function CanvasAssistant({
           })
           
           if (!shape.props.color) shape.props.color = 'black'
+          if (!shape.props.dash) shape.props.dash = 'draw'
+          if (!shape.props.size) shape.props.size = 'm'
           if (!shape.props.start) {
             shape.props.start = { x: shape.x, y: shape.y }
           }
@@ -128,11 +143,27 @@ export default function CanvasAssistant({
             shape.props.end = { x: (shape.x || 0) + 100, y: (shape.y || 0) + 100 }
           }
         }
-            })
+        
+        // Line shapes
+        if (shape.type === 'line') {
+          const invalidProps = ['text', 'w', 'h', 'geo', 'fill', 'richText', 'start', 'end']
+          invalidProps.forEach(prop => {
+            if (shape.props[prop]) {
+              console.warn(`Removing ${prop} property from line shape (not supported)`)
+              delete shape.props[prop]
+            }
+          })
+          
+          if (!shape.props.color) shape.props.color = 'black'
+          if (!shape.props.dash) shape.props.dash = 'draw'
+          if (!shape.props.size) shape.props.size = 'm'
+          // Line shapes already have 'points' set by renderer
+        }
+      })
+      
       editorController.createShapes(shapesToCreate)
       return true
     } catch (err) {
-      console.error('Error executing shapes:', err)
       console.error('Stack trace:', err instanceof Error ? err.stack : 'No stack trace')
       return false
     }
@@ -160,11 +191,10 @@ export default function CanvasAssistant({
     try {
       const canvasSnapshot = getCanvasSnapshot()
       
-      let canvasImage: string | undefined
+      let canvasImage = ''
       if (editorController) {
         try {
           canvasImage = await editorController.getCanvasImage()
-          console.log('Canvas screenshot captured:', canvasImage)
           
           setIsOpen(false)
         } catch (err) {
@@ -172,7 +202,8 @@ export default function CanvasAssistant({
         }
       }
       
-      const data = await sendMessage(trimmed, canvasSnapshot, canvasImage)
+      const data = await sendMessage(trimmed, canvasImage, canvasSnapshot,)
+     console.log('Response data received:', data);
       const reply = data?.reply ?? ''
       const execution = data.execution
       console.log('Execution data received:', execution)

@@ -83,8 +83,6 @@ export class EditorController {
     const result = await editor.toImageDataUrl(shapeIds, {
       format: 'png', 
       background: true,
-      padding: 32,
-      scale: 2,
     });
     return result.url;
   } 

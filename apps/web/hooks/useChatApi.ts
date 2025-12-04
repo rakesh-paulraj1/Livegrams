@@ -18,10 +18,10 @@ export default function useChatApi() {
 
   const sendMessage = useCallback(async (
     message: string, 
+    canvasImage: string,
     canvasSnapshot?: Array<{id: string, type: string, x?: number, y?: number, props?: Record<string, unknown>}>,
-    canvasImage?: string
+   
   ) => {
-    // Check cache
     const snapshotKey = JSON.stringify(canvasSnapshot || [])
     const now = Date.now()
     
@@ -36,10 +36,10 @@ export default function useChatApi() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/draw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, canvasSnapshot, canvasImage }),
+        body: JSON.stringify({ message, canvasImage }),
       })
       if (!res.ok) {
         const text = await res.text()
@@ -47,14 +47,31 @@ export default function useChatApi() {
       }
       const data = await res.json()
       
+      // Transform /api/draw response to match expected format
+      const transformedData = {
+        success: data.success,
+        reply: data.reply || '',
+        // Convert tldrawShapes to execution format for CanvasAssistant
+        execution: data.success ? {
+          ok: true,
+          action: 'create',
+          shapes: data.tldrawShapes || []
+        } : {
+          ok: false,
+          error: data.error || 'Failed to generate shapes'
+        },
+        stats: data.stats,
+        primitives: data.primitives
+      }
+      
       cacheRef.current = {
         message,
         canvasSnapshot: snapshotKey,
-        response: data,
+        response: transformedData,
         timestamp: now
       }
       
-      return data
+      return transformedData
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg || 'Unknown error')
