@@ -1,8 +1,3 @@
-/**
- * Primitive Shape Definitions
- * These are the fundamental building blocks the LLM outputs
- * The renderer converts these to TLDraw shapes
- */
 
 export type GeoShape = 
   | "rectangle" 

@@ -4,6 +4,7 @@ import React, {  useRef } from 'react'
 import { Tldraw, toRichText } from 'tldraw'
 import 'tldraw/tldraw.css'
 import CanvasAssistant from '../../components/CanvasAssistant'
+import Canvas from '../../components/Canvas'
 
 export default function App() {
 	const editorRef = useRef<any | null>(null)
@@ -39,8 +40,8 @@ export default function App() {
 				</div>
 			</div>
 
-		
-				<CanvasAssistant editor={editorRef} />
+		<Canvas editor={editorRef} />
+				{/* <CanvasAssistant editor={editorRef} /> */}
 		</div>
 	)
 }

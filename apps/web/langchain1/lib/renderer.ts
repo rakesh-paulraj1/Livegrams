@@ -1,4 +1,3 @@
-
 import { 
   Primitive, 
   RectanglePrimitive, 
@@ -10,49 +9,75 @@ import {
   PolygonPrimitive 
 } from "./primitives";
 
+function toRichText(text: string) {
+  const lines = text.split("\n");
+  const content = lines.map((lineText) => {
+    if (!lineText) {
+      return {
+        type: "paragraph"
+      };
+    }
+    return {
+      type: "paragraph",
+      content: [{ type: "text", text: lineText }]
+    };
+  });
+  return {
+    type: "doc",
+    content
+  };
+}
+
 export interface TLDrawShape {
   id: string;
+  typeName: "shape";
   type: "geo" | "text" | "arrow" | "line" | "draw";
   x: number;
   y: number;
   props: Record<string, unknown>;
-  rotation?: number;
-  opacity?: number;
+  rotation: number;
+  opacity: number;
   index?: string;
   parentId?: string;
+  isLocked: boolean;
+  meta: Record<string, unknown>;
 }
 
 class PrimitiveRenderer {
   private shapeCounter = 0;
 
   private generateId(prefix: string): string {
-    return `${prefix}-${this.shapeCounter++}-${Date.now()}`;
+    return `shape:${prefix}-${this.shapeCounter++}-${Date.now()}`;
   }
 
 
   private renderRectangle(primitive: RectanglePrimitive): TLDrawShape {
     return {
       id: this.generateId("rect"),
+      typeName: "shape",
       type: "geo",
       x: primitive.x,
       y: primitive.y,
       rotation: 0,
       opacity: 1,
+      isLocked: false,
+      meta: {},
       props: {
         geo: "rectangle",
-        w: primitive.w,
-        h: primitive.h,
+        w: primitive.w || 100,
+        h: primitive.h || 100,
         color: primitive.color || "black",
         labelColor: "black",
         fill: primitive.fillColor ? "solid" : "none",
         dash: "draw",
         size: "m",
         font: "draw",
-        text: primitive.label || "",
+        richText: primitive.label ? toRichText(primitive.label) : toRichText(""),
         align: "middle",
         verticalAlign: "middle",
         growY: 0,
-        url: ""
+        url: "",
+        scale: 1
       }
     };
   }
@@ -60,26 +85,30 @@ class PrimitiveRenderer {
   private renderEllipse(primitive: EllipsePrimitive): TLDrawShape {
     return {
       id: this.generateId("ellipse"),
+      typeName: "shape",
       type: "geo",
       x: primitive.x,
       y: primitive.y,
       rotation: 0,
       opacity: 1,
+      isLocked: false,
+      meta: {},
       props: {
         geo: "ellipse",
-        w: primitive.w,
-        h: primitive.h,
+        w: primitive.w || 100,
+        h: primitive.h || 100,
         color: primitive.color || "black",
         labelColor: "black",
         fill: primitive.fillColor ? "solid" : "none",
         dash: "draw",
         size: "m",
         font: "draw",
-        text: primitive.label || "",
+        richText: primitive.label ? toRichText(primitive.label) : toRichText(""),
         align: "middle",
         verticalAlign: "middle",
         growY: 0,
-        url: ""
+        url: "",
+        scale: 1
       }
     };
   }
@@ -87,26 +116,30 @@ class PrimitiveRenderer {
   private renderGeo(primitive: GeoPrimitive): TLDrawShape {
     return {
       id: this.generateId("geo"),
+      typeName: "shape",
       type: "geo",
       x: primitive.x,
       y: primitive.y,
       rotation: 0,
       opacity: 1,
+      isLocked: false,
+      meta: {},
       props: {
         geo: primitive.shape,
-        w: primitive.w,
-        h: primitive.h,
+        w: primitive.w || 100,
+        h: primitive.h || 100,
         color: primitive.color || "black",
         labelColor: "black",
         fill: primitive.fillColor ? "solid" : "none",
         dash: "draw",
         size: "m",
         font: "draw",
-        text: primitive.label || "",
+        richText: primitive.label ? toRichText(primitive.label) : toRichText(""),
         align: "middle",
         verticalAlign: "middle",
         growY: 0,
-        url: ""
+        url: "",
+        scale: 1
       }
     };
   }
@@ -116,39 +149,50 @@ class PrimitiveRenderer {
     const textContent = primitive.text || "";
     return {
       id: this.generateId("text"),
+      typeName: "shape",
       type: "text",
       x: primitive.x,
       y: primitive.y,
       rotation: 0,
       opacity: 1,
+      isLocked: false,
+      meta: {},
       props: {
-        text: textContent,
+        richText: toRichText(textContent),
         color: primitive.color || "black",
         size: this.mapFontSize(primitive.fontSize),
         font: primitive.fontFamily || "draw",
+        textAlign: "start",
         w: Math.max(100, textContent.length * 8),
-        align: "start"
+        scale: 1,
+        autoSize: true
       }
     };
   }
 
 
   private renderArrow(primitive: ArrowPrimitive): TLDrawShape {
+    const start = primitive.start || { x: primitive.x || 0, y: primitive.y || 0 };
+    const end = primitive.end || { x: (start.x || 0) + 100, y: (start.y || 0) };
+
     return {
       id: this.generateId("arrow"),
+      typeName: "shape",
       type: "arrow",
-      x: primitive.start.x,
-      y: primitive.start.y,
+      x: start.x,
+      y: start.y,
       rotation: 0,
       opacity: 1,
+      isLocked: false,
+      meta: {},
       props: {
         start: {
-          x: primitive.start.x,
-          y: primitive.start.y
+          x: 0, 
+          y: 0  
         },
         end: {
-          x: primitive.end.x,
-          y: primitive.end.y
+          x: end.x - start.x, 
+          y: end.y - start.y   
         },
         color: primitive.color || "black",
         arrowheadStart: "none",
@@ -160,26 +204,29 @@ class PrimitiveRenderer {
     };
   }
 
-  /**
-   * Render line primitive to TLDraw shape
-   * TLDraw line shapes use a points array with unique IDs
-   */
+
   private renderLine(primitive: LinePrimitive): TLDrawShape {
     const pointId1 = `point-${this.shapeCounter}`;
     const pointId2 = `point-${this.shapeCounter + 1}`;
     this.shapeCounter += 2;
 
+    const start = primitive.start || { x: primitive.x || 0, y: primitive.y || 0 };
+    const end = primitive.end || { x: (start.x || 0) + 100, y: (start.y || 0) };
+
     return {
       id: this.generateId("line"),
+      typeName: "shape",
       type: "line",
-      x: primitive.start.x,
-      y: primitive.start.y,
+      x: start.x,
+      y: start.y,
       rotation: 0,
       opacity: 1,
+      isLocked: false,
+      meta: {},
       props: {
         points: [
-          { id: pointId1, x: primitive.start.x, y: primitive.start.y },
-          { id: pointId2, x: primitive.end.x, y: primitive.end.y }
+          { id: pointId1, x: 0, y: 0 },  
+          { id: pointId2, x: end.x - start.x, y: end.y - start.y } 
         ],
         color: primitive.color || "black",
         bend: primitive.curved ? 20 : 0,
@@ -191,10 +238,8 @@ class PrimitiveRenderer {
 
   private renderPolygon(primitive: PolygonPrimitive): TLDrawShape[] {
     const shapes: TLDrawShape[] = [];
-    const points = primitive.points;
-
+    const points = primitive.points || [];
     if (points.length < 2) return shapes;
-
     for (let i = 0; i < points.length; i++) {
       const start = points[i];
       const end = points[(i + 1) % points.length];
@@ -206,15 +251,18 @@ class PrimitiveRenderer {
 
         shapes.push({
           id: this.generateId("polygon-line"),
+          typeName: "shape",
           type: "line",
           x: start.x,
           y: start.y,
           rotation: 0,
           opacity: 1,
+          isLocked: false,
+          meta: {},
           props: {
             points: [
-              { id: pointId1, x: start.x, y: start.y },
-              { id: pointId2, x: end.x, y: end.y }
+              { id: pointId1, x: 0, y: 0 },  
+              { id: pointId2, x: end.x - start.x, y: end.y - start.y }  
             ],
             color: primitive.color || "black",
             size: "m",
@@ -243,7 +291,6 @@ class PrimitiveRenderer {
         return this.renderRectangle(primitive as RectanglePrimitive);
       case "ellipse":
         return this.renderEllipse(primitive as EllipsePrimitive);
-      // Handle all other geo shapes
       case "diamond":
       case "pentagon":
       case "hexagon":

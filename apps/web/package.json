@@ -23,6 +23,7 @@
     "@tailwindcss/postcss": "^4.1.13",
     "@tldraw/state": "^4.1.1",
     "@tldraw/tlschema": "^4.1.1",
+    "canvas": "^3.2.0",
     "cheerio": "^1.1.2",
     "clsx": "^2.1.1",
     "cookie": "^1.0.2",

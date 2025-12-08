@@ -1,8 +1,13 @@
 export type CanvasShape = {
   id: string;
+  typeName?: string;
   type: string;
   x?: number;
   y?: number;
+  rotation?: number;
+  opacity?: number;
+  isLocked?: boolean;
+  meta?: Record<string, unknown>;
   props?: Record<string, unknown>;
 };
 

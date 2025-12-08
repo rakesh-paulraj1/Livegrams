@@ -19,14 +19,12 @@ export default function ConnectionUI({
   const handleShare = async () => {
     if (!roomId) return
     try {
-      // Copy the room slug (roomId is expected to be the slug)
       const slugToCopy = String(roomId)
       await navigator.clipboard.writeText(slugToCopy)
       setCopied(true)
       if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      // ignore copy errors
       console.error('Copy failed', err)
     }
   }
@@ -68,7 +66,7 @@ export default function ConnectionUI({
             className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm shadow-lg hover:bg-gray-50"
             aria-label="Share room code"
           >
-            🔗 Share
+             Share
           </button>
           {copied && (
             <div className="text-sm text-green-600 font-medium">Slug copied!</div>

@@ -1,32 +1,15 @@
-/**
- * Canvas API Route - Primitive-Based Drawing
- * 
- * POST /api/draw
- * 
- * Request:
- * {
- *   "message": "draw a bus",
- *   "canvasImage": "data:image/jpeg;base64,..."
- * }
- * 
- * Response:
- * {
- *   "success": true,
- *   "primitives": [...],
- *   "tldrawShapes": [...],
- *   "reply": "Created 6 shapes...",
- *   "stats": { ... }
- * }
- */
+
 
 import { NextResponse, NextRequest } from "next/server";
-import { drawWithPrimitives } from "../../../langchain1/agent";
+import { runLayoutAgent } from "../../../langchain1/graph/layout-agent";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const message = body?.message || "";
     const canvasImage = body?.canvasImage;
+    const existingLayout = body?.existingLayout;
+    const useValidation = body?.useValidation !== false; // Default to true
 
     if (!message.trim()) {
       return NextResponse.json(
@@ -38,14 +21,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    console.log("📨 Draw API Request:", message);
-
-    const result = await drawWithPrimitives({
+    // Use new Layout Agent (no node-canvas!)
+    const result = await runLayoutAgent({
       userRequest: message,
-      canvasImage
+      canvasImage,
+      existingLayout,
+      maxAttempts: useValidation ? 3 : 1,
     });
 
     console.log("Draw API Response:", result.success ? "SUCCESS" : "FAILED");
+    if (result.stats) {
+      console.log(`Stats: ${result.stats.attempts} attempts, valid: ${result.stats.isValid}`);
+    }
 
     return NextResponse.json(result);
   } catch (error) {

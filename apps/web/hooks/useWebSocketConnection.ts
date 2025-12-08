@@ -71,8 +71,7 @@ export function useWebSocketConnection({
               }
             } else if (data.type === 'record-removed' && Array.isArray(data.ids)) {
               store.mergeRemoteChanges(() => {
-                store.remove(data.ids);
-              });
+                store.remove(data.ids);});
             }
           } catch (error) {
             console.error('[Client] Error processing WebSocket message:', error);

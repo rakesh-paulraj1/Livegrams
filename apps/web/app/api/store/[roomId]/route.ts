@@ -16,7 +16,6 @@ export async function GET(
       );
     }
 
-    // Find the most recent store entry for this room
     const store = await prismaClient.store.findFirst({
       where: { roomId },
       orderBy: { id: 'desc' },

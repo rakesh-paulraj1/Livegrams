@@ -45,14 +45,12 @@ wss.on("connection", function connection(ws, request) {
     return;
   }
 
-  console.log(`WebSocket connection established for user: ${userInfo.name} (${userInfo.email})`);
   
   (ws as any).userInfo = userInfo;
   
   ws.on("message", function message(data) {
     try {
       const messageData = JSON.parse(data.toString());
-      console.log(`[WS] Received message from ${userInfo.name}:`, messageData.type, 'roomId:', messageData.roomId);
     
       if (!messageData.roomId) {
         console.log('[WS] No roomId in message, ignoring');

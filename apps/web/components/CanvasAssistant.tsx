@@ -6,9 +6,7 @@ import useChatApi from '../hooks/useChatApi'
 import { toRichText } from 'tldraw'
 import { EditorController, CanvasShape } from '../langchain/lib/editorcontroller'
 
-function cn(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(' ')
-}
+import { cn } from "../utils/cn";
 
 
 

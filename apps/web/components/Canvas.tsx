@@ -1,0 +1,277 @@
+"use client"
+import React, { useRef, useState, useMemo, useEffect } from 'react'
+import { cn } from "../utils/cn";
+import {  EditorController } from '../langchain/lib/editorcontroller'
+import AI_Input from './ai-inputbox'
+
+interface DrawingMessage {
+  id: number
+  text: string
+  from: 'user' | 'bot'
+  timestamp: Date
+}
+
+interface DrawingResponse {
+  success: boolean
+  tldrawShapes?: Array<{
+    id: string
+    typeName?: string
+    type: string
+    x: number
+    y: number
+    props: Record<string, unknown>
+    meta?: Record<string, unknown>
+    isLocked?: boolean
+    rotation?: number
+    opacity?: number
+  }>
+  reply?: string
+  error?: string
+  stats?: {
+    primitiveCount: number
+    shapeCount: number
+    executionTime: number
+  }
+}
+
+const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
+  
+  const [messages, setMessages] = useState<DrawingMessage[]>([
+    { 
+      id: 1, 
+      text: 'Hello! I\'m your drawing assistant. Describe what you want to draw.', 
+      from: 'bot',
+      timestamp: new Date()
+    }
+  ])
+  const [inputText, setInputText] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
+  
+    const editorController = useMemo(() => {
+    return editor ? new EditorController(editor) : null
+  }, [editor])
+  
+  const messageListRef = useRef<HTMLDivElement>(null)
+  const idRef = useRef(2)
+  const lastRequestRef = useRef<string>('')
+
+  useEffect(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight
+    }
+  }, [messages])
+
+
+  const executeShapes = (shapes: DrawingResponse['tldrawShapes']): boolean => {
+    if (!editorController || !shapes) {
+      console.error('No editor or shapes')
+      return false
+    }
+
+    try {
+      const shapesToCreate = shapes.map(s => ({
+        id: s.id.startsWith('shape:') ? s.id : `shape:${s.id}`,
+        typeName: s.typeName || 'shape',
+        type: s.type || 'geo',
+        x: s.x ?? 100,
+        y: s.y ?? 100,
+        rotation: s.rotation ?? 0,
+        opacity: s.opacity ?? 1,
+        isLocked: s.isLocked ?? false,
+        meta: s.meta || {},
+        props: { ...s.props }
+      }))
+
+    
+      editorController.createShapes(shapesToCreate)
+      return true
+    } catch (err) {
+      console.error('Error executing shapes:', err)
+      return false
+    }
+  }
+
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!editorController) {
+  console.error('Editor not ready')
+  return
+}
+
+    const trimmed = inputText.trim()
+    if (!trimmed || isLoading) return
+    
+    if (trimmed === lastRequestRef.current) {
+      console.log('Please avoid repeating the same message')
+      return
+    }
+    lastRequestRef.current = trimmed
+    setIsLoading(true)
+
+    const userMsg: DrawingMessage = {
+      id: idRef.current++,
+      text: trimmed,
+      from: 'user',
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, userMsg])
+    setInputText('')
+
+    try {
+     
+          const canvasImage=editorController.getCanvasImage();
+    const canvasContext=editorController.getShapes();
+
+      const response = await fetch('/api/draw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: trimmed,
+          canvasImage,
+          canvasContext
+        })
+      })
+
+      const data: DrawingResponse = await response.json()
+      console.log('Draw API response:', data)
+      
+      const botMsg: DrawingMessage = {
+        id: idRef.current++,
+        text: data.reply || 'Drawing completed',
+        from: 'bot',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, botMsg])
+
+      if (data.success && data.tldrawShapes?.length) {
+        const success = executeShapes(data.tldrawShapes)
+        if (!success) {
+          const errMsg: DrawingMessage = {
+            id: idRef.current++,
+            text: 'Failed to render shapes on canvas',
+            from: 'bot',
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, errMsg])
+        }
+      } else if (data.success && !data.tldrawShapes?.length) {
+        // UPDATE/DELETE/MOVE/CLEAR intents - already executed server-side
+        console.log('Intent executed successfully:', data.stats)
+      } else if (!data.success) {
+        const errMsg: DrawingMessage = {
+          id: idRef.current++,
+          text: `Error: ${data.error || 'Unknown error'}`,
+          from: 'bot',
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errMsg])
+      }
+    } catch (err) {
+      const errMsg: DrawingMessage = {
+        id: idRef.current++,
+        text: `Error: ${err instanceof Error ? err.message : String(err)}`,
+        from: 'bot',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errMsg])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <>
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="lg:hidden fixed top-4 right-4 z-50 bg-sky-600 text-white p-4 rounded-full shadow-lg hover:bg-sky-700 transition-colors"
+          aria-label="Toggle assistant"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-6 w-6" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" 
+            />
+          </svg>
+        </button>
+      )}
+
+      <aside className={cn(
+        'w-full lg:w-[380px] border-l-2 border-slate-200 flex flex-col bg-white text-slate-800 shadow-sm',
+        'fixed lg:relative inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out',
+        isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+      )}>
+        <button
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden absolute top-4 right-4 z-10 text-slate-500 hover:text-slate-700"
+          aria-label="Close assistant"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-6 w-6" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M6 18L18 6M6 6l12 12" 
+            />
+          </svg>
+        </button>
+
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 font-semibold text-slate-700">Canvas Assistant</div>
+
+        <div ref={messageListRef} className="p-4 overflow-y-auto flex-1 bg-white">
+          {messages.map((m) => (
+            <div key={m.id} className={cn('mb-3 flex flex-col', m.from === 'user' ? 'items-end' : 'items-start')}>
+              <div
+                className={cn(
+                  m.from === 'user' ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-900 border border-slate-100',
+                  'max-w-[80%] py-2 px-3 rounded-lg'
+                )}
+              >
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="mb-3 flex flex-col items-start">
+              <div className="bg-slate-100 text-slate-500 border border-slate-100 max-w-[80%] py-2 px-3 rounded-lg text-sm">
+                Processing your request...
+              </div>
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleSend} className="border-t border-slate-200 p-3 bg-white">
+          <AI_Input
+            value={inputText}
+            onChange={setInputText}
+            onSubmit={handleSend}
+          />
+        </form>
+      </aside>
+
+      {isOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </>
+  )
+}
+
+export default Canvas

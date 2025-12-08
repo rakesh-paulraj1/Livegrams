@@ -37,7 +37,6 @@ export function TldrawMultiplayer({ roomId }: TldrawMultiplayerProps) {
     wsRef,
     userColor,
   });
-  
   useStoreBroadcaster({
     roomId,
     storeWithStatus,
