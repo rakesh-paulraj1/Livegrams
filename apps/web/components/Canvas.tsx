@@ -1,7 +1,7 @@
 "use client"
 import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { cn } from "../utils/cn";
-import {  EditorController } from '../langchain/lib/editorcontroller'
+import { EditorController } from '../langchain1/lib/editorcontroller';
 import AI_Input from './ai-inputbox'
 
 interface DrawingMessage {
@@ -24,6 +24,20 @@ interface DrawingResponse {
     isLocked?: boolean
     rotation?: number
     opacity?: number
+  }>
+  bindings?: Array<{
+    id: string
+    typeName: "binding"
+    type: "arrow"
+    fromId: string
+    toId: string
+    props: {
+      terminal: "start" | "end"
+      normalizedAnchor: { x: number; y: number }
+      isExact: boolean
+      isPrecise: boolean
+    }
+    meta: Record<string, unknown>
   }>
   reply?: string
   error?: string
@@ -63,7 +77,7 @@ const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
   }, [messages])
 
 
-  const executeShapes = (shapes: DrawingResponse['tldrawShapes']): boolean => {
+  const executeShapes = (shapes: DrawingResponse['tldrawShapes'], bindings?: DrawingResponse['bindings']): boolean => {
     if (!editorController || !shapes) {
       console.error('No editor or shapes')
       return false
@@ -83,8 +97,12 @@ const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
         props: { ...s.props }
       }))
 
-    
-      editorController.createShapes(shapesToCreate)
+      // Create shapes with bindings for proper arrow connections
+      if (bindings && bindings.length > 0) {
+        editorController.createShapesWithBindings(shapesToCreate, bindings)
+      } else {
+        editorController.createShapes(shapesToCreate)
+      }
       return true
     } catch (err) {
       console.error('Error executing shapes:', err)
@@ -120,15 +138,15 @@ const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
 
     try {
      
-          const canvasImage=editorController.getCanvasImage();
     const canvasContext=editorController.getShapes();
+
 
       const response = await fetch('/api/draw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmed,
-          canvasImage,
+       
           canvasContext
         })
       })
@@ -145,7 +163,7 @@ const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
       setMessages(prev => [...prev, botMsg])
 
       if (data.success && data.tldrawShapes?.length) {
-        const success = executeShapes(data.tldrawShapes)
+        const success = executeShapes(data.tldrawShapes, data.bindings)
         if (!success) {
           const errMsg: DrawingMessage = {
             id: idRef.current++,
@@ -156,7 +174,6 @@ const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
           setMessages(prev => [...prev, errMsg])
         }
       } else if (data.success && !data.tldrawShapes?.length) {
-        // UPDATE/DELETE/MOVE/CLEAR intents - already executed server-side
         console.log('Intent executed successfully:', data.stats)
       } else if (!data.success) {
         const errMsg: DrawingMessage = {

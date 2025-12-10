@@ -28,6 +28,31 @@ function toRichText(text: string) {
   };
 }
 
+function calculateBoxSize(label: string | undefined, requestedW: number | null | undefined, requestedH: number | null | undefined): { w: number; h: number } {
+  const safeW = requestedW ?? 100;
+  const safeH = requestedH ?? 60;
+  
+  if (!label) {
+    return { w: Math.max(safeW, 120), h: Math.max(safeH, 80) };
+  }
+  
+  const lines = label.split("\n");
+  const maxLineLength = Math.max(...lines.map(l => l.length));
+
+  const charWidth = 18;
+  const horizontalPadding = 80;
+  const lineHeight = 36;
+  const verticalPadding = 50;   
+  
+  const minWidth = Math.max(maxLineLength * charWidth + horizontalPadding, 140);
+  const minHeight = Math.max(lines.length * lineHeight + verticalPadding, 80);
+  
+  return {
+    w: Math.max(safeW, minWidth),
+    h: Math.max(safeH, minHeight)
+  };
+}
+
 export interface TLDrawShape {
   id: string;
   typeName: "shape";
@@ -43,17 +68,51 @@ export interface TLDrawShape {
   meta: Record<string, unknown>;
 }
 
+export interface TLArrowBinding {
+  id: string;
+  typeName: "binding";
+  type: "arrow";
+  fromId: string;  
+  toId: string;   
+  props: {terminal: "start" | "end";
+    normalizedAnchor: { x: number; y: number };
+    isExact: boolean;
+    isPrecise: boolean;
+  };
+  meta: Record<string, unknown>;
+}
+
+export interface RenderResult {
+  shapes: TLDrawShape[];
+  bindings: TLArrowBinding[];
+}
+
 class PrimitiveRenderer {
   private shapeCounter = 0;
+  private bindingCounter = 0;
+  private labelToShapeId: Map<string, string> = new Map();
+  private shapePositions: Map<string, { x: number; y: number; w: number; h: number }> = new Map();
 
   private generateId(prefix: string): string {
     return `shape:${prefix}-${this.shapeCounter++}-${Date.now()}`;
   }
+  
+  private generateBindingId(): string {
+    return `binding:arrow-${this.bindingCounter++}-${Date.now()}`;
+  }
 
 
   private renderRectangle(primitive: RectanglePrimitive): TLDrawShape {
+    const size = calculateBoxSize(primitive.label, primitive.w, primitive.h);
+    const id = this.generateId("rect");
+    
+    if (primitive.label) {
+      this.labelToShapeId.set(primitive.label.toLowerCase(), id);
+    }
+    this.shapePositions.set(id, { x: primitive.x, y: primitive.y, w: size.w, h: size.h });
+    
     return {
-      id: this.generateId("rect"),
+      id,
       typeName: "shape",
       type: "geo",
       x: primitive.x,
@@ -64,8 +123,8 @@ class PrimitiveRenderer {
       meta: {},
       props: {
         geo: "rectangle",
-        w: primitive.w || 100,
-        h: primitive.h || 100,
+        w: size.w,
+        h: size.h,
         color: primitive.color || "black",
         labelColor: "black",
         fill: primitive.fillColor ? "solid" : "none",
@@ -83,8 +142,16 @@ class PrimitiveRenderer {
   }
 
   private renderEllipse(primitive: EllipsePrimitive): TLDrawShape {
+    const size = calculateBoxSize(primitive.label, primitive.w, primitive.h);
+    const id = this.generateId("ellipse");
+    
+    if (primitive.label) {
+      this.labelToShapeId.set(primitive.label.toLowerCase(), id);
+    }
+    this.shapePositions.set(id, { x: primitive.x, y: primitive.y, w: size.w, h: size.h });
+    
     return {
-      id: this.generateId("ellipse"),
+      id,
       typeName: "shape",
       type: "geo",
       x: primitive.x,
@@ -95,8 +162,8 @@ class PrimitiveRenderer {
       meta: {},
       props: {
         geo: "ellipse",
-        w: primitive.w || 100,
-        h: primitive.h || 100,
+        w: size.w,
+        h: size.h,
         color: primitive.color || "black",
         labelColor: "black",
         fill: primitive.fillColor ? "solid" : "none",
@@ -114,8 +181,16 @@ class PrimitiveRenderer {
   }
 
   private renderGeo(primitive: GeoPrimitive): TLDrawShape {
+    const size = calculateBoxSize(primitive.label, primitive.w, primitive.h);
+    const id = this.generateId("geo");
+    
+    if (primitive.label) {
+      this.labelToShapeId.set(primitive.label.toLowerCase(), id);
+    }
+    this.shapePositions.set(id, { x: primitive.x, y: primitive.y, w: size.w, h: size.h });
+    
     return {
-      id: this.generateId("geo"),
+      id,
       typeName: "shape",
       type: "geo",
       x: primitive.x,
@@ -126,8 +201,8 @@ class PrimitiveRenderer {
       meta: {},
       props: {
         geo: primitive.shape,
-        w: primitive.w || 100,
-        h: primitive.h || 100,
+        w: size.w,
+        h: size.h <60 ? 80 : size.h,
         color: primitive.color || "black",
         labelColor: "black",
         fill: primitive.fillColor ? "solid" : "none",
@@ -147,8 +222,14 @@ class PrimitiveRenderer {
 
   private renderText(primitive: TextPrimitive): TLDrawShape {
     const textContent = primitive.text || "";
+    const id = this.generateId("text");
+    
+    if (textContent) {
+      this.labelToShapeId.set(textContent.toLowerCase(), id);
+    }
+    
     return {
-      id: this.generateId("text"),
+      id,
       typeName: "shape",
       type: "text",
       x: primitive.x,
@@ -163,7 +244,7 @@ class PrimitiveRenderer {
         size: this.mapFontSize(primitive.fontSize),
         font: primitive.fontFamily || "draw",
         textAlign: "start",
-        w: Math.max(100, textContent.length * 8),
+        w: Math.max(100, textContent.length * 4),
         scale: 1,
         autoSize: true
       }
@@ -171,12 +252,49 @@ class PrimitiveRenderer {
   }
 
 
+
+  private arrowsToConnect: Array<{
+    arrowId: string;
+    fromLabel?: string;
+    toLabel?: string;
+  }> = [];
+
   private renderArrow(primitive: ArrowPrimitive): TLDrawShape {
     const start = primitive.start || { x: primitive.x || 0, y: primitive.y || 0 };
     const end = primitive.end || { x: (start.x || 0) + 100, y: (start.y || 0) };
+    const arrowId = this.generateId("arrow");
+    
+    let startProp: Record<string, unknown> = { x: 0, y: 0 };
+    let endProp: Record<string, unknown> = { x: end.x - start.x, y: end.y - start.y };
+    
+    if (primitive.fromLabel) {
+      const fromShapeId = this.labelToShapeId.get(primitive.fromLabel.toLowerCase());
+      if (fromShapeId) {
+        startProp = {
+          type: "binding",
+          boundShapeId: fromShapeId,
+          normalizedAnchor: { x: 0.5, y: 1 }, 
+          isExact: false,
+          isPrecise: false
+        };
+      }
+    }
+    
+    if (primitive.toLabel) {
+      const toShapeId = this.labelToShapeId.get(primitive.toLabel.toLowerCase());
+      if (toShapeId) {
+        endProp = {
+          type: "binding",
+          boundShapeId: toShapeId,
+          normalizedAnchor: { x: 0.5, y: 0 }, 
+          isExact: false,
+          isPrecise: false
+        };
+      }
+    }
 
     return {
-      id: this.generateId("arrow"),
+      id: arrowId,
       typeName: "shape",
       type: "arrow",
       x: start.x,
@@ -186,14 +304,8 @@ class PrimitiveRenderer {
       isLocked: false,
       meta: {},
       props: {
-        start: {
-          x: 0, 
-          y: 0  
-        },
-        end: {
-          x: end.x - start.x, 
-          y: end.y - start.y   
-        },
+        start: startProp,
+        end: endProp,
         color: primitive.color || "black",
         arrowheadStart: "none",
         arrowheadEnd: primitive.arrowHeadType || "arrow",
@@ -206,10 +318,6 @@ class PrimitiveRenderer {
 
 
   private renderLine(primitive: LinePrimitive): TLDrawShape {
-    const pointId1 = `point-${this.shapeCounter}`;
-    const pointId2 = `point-${this.shapeCounter + 1}`;
-    this.shapeCounter += 2;
-
     const start = primitive.start || { x: primitive.x || 0, y: primitive.y || 0 };
     const end = primitive.end || { x: (start.x || 0) + 100, y: (start.y || 0) };
 
@@ -224,12 +332,12 @@ class PrimitiveRenderer {
       isLocked: false,
       meta: {},
       props: {
-        points: [
-          { id: pointId1, x: 0, y: 0 },  
-          { id: pointId2, x: end.x - start.x, y: end.y - start.y } 
-        ],
+        points: {
+          a1: { id: "a1", index: "a1", x: 0, y: 0 },
+          a2: { id: "a2", index: "a2", x: end.x - start.x, y: end.y - start.y }
+        },
         color: primitive.color || "black",
-        bend: primitive.curved ? 20 : 0,
+        spline: primitive.curved ? "cubic" : "line",
         size: "m",
         dash: "draw"
       }
@@ -245,10 +353,6 @@ class PrimitiveRenderer {
       const end = points[(i + 1) % points.length];
 
       if (start && end) {
-        const pointId1 = `point-${this.shapeCounter}`;
-        const pointId2 = `point-${this.shapeCounter + 1}`;
-        this.shapeCounter += 2;
-
         shapes.push({
           id: this.generateId("polygon-line"),
           typeName: "shape",
@@ -260,11 +364,12 @@ class PrimitiveRenderer {
           isLocked: false,
           meta: {},
           props: {
-            points: [
-              { id: pointId1, x: 0, y: 0 },  
-              { id: pointId2, x: end.x - start.x, y: end.y - start.y }  
-            ],
+            points: {
+              a1: { id: "a1", index: "a1", x: 0, y: 0 },
+              a2: { id: "a2", index: "a2", x: end.x - start.x, y: end.y - start.y }
+            },
             color: primitive.color || "black",
+            spline: "line",
             size: "m",
             dash: "draw"
           }
@@ -321,31 +426,99 @@ class PrimitiveRenderer {
   }
 
 
-  render(primitives: Primitive[]): TLDrawShape[] {
-    const shapes: TLDrawShape[] = [];
 
+  private createBindings(): TLArrowBinding[] {
+    const bindings: TLArrowBinding[] = [];
+    
+    for (const arrow of this.arrowsToConnect) {
+    
+      if (arrow.fromLabel) {
+        const fromShapeId = this.labelToShapeId.get(arrow.fromLabel);
+        if (fromShapeId) {
+          bindings.push({
+            id: this.generateBindingId(),
+            typeName: "binding",
+            type: "arrow",
+            fromId: arrow.arrowId,
+            toId: fromShapeId,
+            props: {
+              terminal: "start",
+              normalizedAnchor: { x: 0.5, y: 1 },
+              isExact: false,
+              isPrecise: false
+            },
+            meta: {}
+          });
+        }
+      }
+        if (arrow.toLabel) {
+        const toShapeId = this.labelToShapeId.get(arrow.toLabel);
+        if (toShapeId) {
+          bindings.push({
+            id: this.generateBindingId(),
+            typeName: "binding",
+            type: "arrow",
+            fromId: arrow.arrowId,
+            toId: toShapeId,
+            props: {
+              terminal: "end",
+              normalizedAnchor: { x: 0.5, y: 0 }, 
+              isExact: false,
+              isPrecise: false
+            },
+            meta: {}
+          });
+        }
+      }
+    }
+    
+    return bindings;
+  }
+
+
+  render(primitives: Primitive[]): RenderResult {
+    const shapes: TLDrawShape[] = [];
+    const arrowPrimitives: ArrowPrimitive[] = [];
+
+    // First pass: render all non-arrow shapes (to populate labelToShapeId)
     for (const primitive of primitives) {
-      const result = this.renderPrimitive(primitive);
-      
-      if (Array.isArray(result)) {
-        shapes.push(...result);
+      if (primitive.shape === "arrow") {
+        arrowPrimitives.push(primitive as ArrowPrimitive);
       } else {
-        shapes.push(result);
+        const result = this.renderPrimitive(primitive);
+        if (Array.isArray(result)) {
+          shapes.push(...result);
+        } else {
+          shapes.push(result);
+        }
       }
     }
 
-    return shapes;
+    // Second pass: render arrows (now labelToShapeId is populated)
+    for (const arrowPrimitive of arrowPrimitives) {
+      const result = this.renderArrow(arrowPrimitive);
+      shapes.push(result);
+    }
+
+    // Bindings are no longer needed - binding is embedded in arrow props
+    const bindings: TLArrowBinding[] = [];
+
+    return { shapes, bindings };
   }
 
 
   reset(): void {
     this.shapeCounter = 0;
+    this.bindingCounter = 0;
+    this.labelToShapeId.clear();
+    this.shapePositions.clear();
+    this.arrowsToConnect = [];
   }
 }
 
 export const renderer = new PrimitiveRenderer();
 
-export function renderPrimitives(primitives: Primitive[]): TLDrawShape[] {
+export function renderPrimitives(primitives: Primitive[]): RenderResult {
   renderer.reset();
   return renderer.render(primitives);
 }

@@ -1,7 +1,9 @@
+import 'dotenv/config';
 import { WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET =  "livesgram_password";
+const JWT_SECRET = process.env.JWT_SECRET!;
+
 const wss = new WebSocketServer({ port: 8080 });
 
 interface JWTPayload {

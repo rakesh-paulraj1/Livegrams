@@ -66,6 +66,8 @@ export interface ArrowPrimitive extends BasePrimitive {
   end: Point;
   arrowHeadType?: "arrow" | "triangle" | "dot" | "square";
   curved?: boolean;
+  fromLabel?: string;  
+  toLabel?: string;   
 }
 
 export interface LinePrimitive extends BasePrimitive {

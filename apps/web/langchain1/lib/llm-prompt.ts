@@ -1,5 +1,3 @@
-
-
 export const PRIMITIVE_GENERATOR_PROMPT = `You are a shape composition expert. 
 
 Your job is to break down ANY object or diagram into simple primitive shapes using TLDraw's native shapes.
@@ -28,7 +26,7 @@ PRIMITIVE SHAPES YOU CAN USE:
 - "arrow-up": Arrow pointing up. Needs: x, y, w, h, label (optional)
 - "arrow-down": Arrow pointing down. Needs: x, y, w, h, label (optional)
 - "text": A text label. Needs: x, y, text (content), fontSize (optional), fontFamily (optional)
-- "arrow": A directional arrow between two points. Needs: x, y, start {x, y}, end {x, y}, arrowHeadType (optional)
+- "arrow": A directional arrow between two points. Needs: x, y, start {x, y}, end {x, y}, arrowHeadType (optional), fromLabel (label of start shape), toLabel (label of end shape)
 - "line": A simple line. Needs: x, y, points (array of {x, y}), curved (optional boolean) - DO NOT use start/end!
 - "polygon": A multi-point shape. Needs: x, y, points (array of {x, y}), sides (optional)
 
@@ -62,9 +60,8 @@ RULES:
 8. Keep coordinates within a reasonable canvas size (0-1000 for x and y)
 9. PREFER native shapes over trying to construct complex shapes with lines
 10. Return ONLY the JSON, no other text
-
+11. For STRUCTURED diagrams (flowcharts, org charts): ALWAYS include "fromLabel" and "toLabel" on arrows to specify which shapes they connect. The label values must EXACTLY match the "label" property of the shapes they connect to.
 EXAMPLES:
-
 User: "Draw a car"
 Response:
 {
@@ -80,11 +77,12 @@ Response:
 User: "Simple flowchart with Start, Decision, and End"
 Response:
 {
+  "diagramType": "structured",
   "items": [
     { "shape": "ellipse", "x": 250, "y": 50, "w": 100, "h": 60, "label": "Start" },
-    { "shape": "arrow", "x": 300, "y": 110, "start": { "x": 300, "y": 110 }, "end": { "x": 300, "y": 180 } },
+    { "shape": "arrow", "x": 300, "y": 110, "start": { "x": 300, "y": 110 }, "end": { "x": 300, "y": 180 }, "fromLabel": "Start", "toLabel": "Decision?" },
     { "shape": "diamond", "x": 250, "y": 180, "w": 100, "h": 100, "label": "Decision?" },
-    { "shape": "arrow", "x": 300, "y": 280, "start": { "x": 300, "y": 280 }, "end": { "x": 300, "y": 350 } },
+    { "shape": "arrow", "x": 300, "y": 280, "start": { "x": 300, "y": 280 }, "end": { "x": 300, "y": 350 }, "fromLabel": "Decision?", "toLabel": "End" },
     { "shape": "ellipse", "x": 250, "y": 350, "w": 100, "h": 60, "label": "End" }
   ]
 }
@@ -105,6 +103,25 @@ Response:
     { "shape": "check-box", "x": 225, "y": 125, "w": 50, "h": 50, "label": "✓" }
   ]
 }
+
+IMPORTANT: You MUST output a "diagramType" field to classify your output:
+
+- "structured": Use for flowcharts, org charts, diagrams with arrows connecting shapes, 
+  process flows, hierarchies, mind maps, sequences - anything where shapes need proper 
+  alignment, spacing, and arrow connections. These will be validated for overlaps and 
+  proper connections.
+
+- "freeform": Use for single shapes (star, circle), artistic compositions (car, house, 
+  person), decorative drawings, or anything where overlapping is intentional or acceptable.
+  These skip validation.
+
+Examples:
+- "draw a flowchart" → diagramType: "structured"
+- "create org chart" → diagramType: "structured"  
+- "draw a star" → diagramType: "freeform"
+- "draw a car" → diagramType: "freeform"
+- "login process diagram" → diagramType: "structured"
+- "draw a house" → diagramType: "freeform"
 
 Now, break down the user's request into primitives.`;
 
@@ -139,12 +156,18 @@ export const PrimitiveSchema = z.object({
   points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
   sides: z.number().optional(),
   arrowHeadType: z.string().optional(),
-  curved: z.boolean().optional()
+  curved: z.boolean().optional(),
+  fromLabel: z.string().optional(),
+  toLabel: z.string().optional()    
 });
 
 export const PrimitiveOutputSchema = z.object({
   items: z.array(PrimitiveSchema),
-  description: z.string().optional()
+  description: z.string().optional(),
+  diagramType: z.enum([
+    "structured",     
+    "freeform",
+  ]).default("freeform"),
 });
 
 export type PrimitiveOutput = z.infer<typeof PrimitiveOutputSchema>;

@@ -84,7 +84,6 @@ export default function App() {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        // navigate to public slug
         router.push(`/setup/${data.slug ?? generatedRoomId}`);
       } else {
         setIsCreating(false);
@@ -300,7 +299,7 @@ export default function App() {
 
         <Header />
 
-        {/* Hero Section */}
+      
         <Hero onStartClick={() => setIsDialogOpen(true)} />
 
         {/* Device preview: show Safari on md+ and Android on small screens */}

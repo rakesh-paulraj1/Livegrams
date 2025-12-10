@@ -16,8 +16,9 @@ export function createAuthenticatedWebSocket(roomId: number, session: any): WebS
     console.error('No JWT token found in session. Please log in first.');
     return null;
   }
+  const ws_url=process.env.NEXT_PUBLIC_WS_URL 
   
-  const wsUrl = `ws://localhost:8080?token=${encodeURIComponent(token)}&roomId=${roomId}`;
+  const wsUrl = `${ws_url}?token=${encodeURIComponent(token)}&roomId=${roomId}`;
   
   try {
     const socket = new WebSocket(wsUrl);

@@ -11,6 +11,21 @@ export type CanvasShape = {
   props?: Record<string, unknown>;
 };
 
+export type CanvasBinding = {
+  id: string;
+  typeName: "binding";
+  type: "arrow";
+  fromId: string;
+  toId: string;
+  props: {
+    terminal: "start" | "end";
+    normalizedAnchor: { x: number; y: number };
+    isExact: boolean;
+    isPrecise: boolean;
+  };
+  meta: Record<string, unknown>;
+};
+
 export class EditorController {
   constructor(private editorRef: React.RefObject<any>) {}
 
@@ -48,6 +63,22 @@ export class EditorController {
 
   createShapes(shapes: CanvasShape[]) {
     return this.run((ed) => ed.createShapes(shapes));
+  }
+
+  /**
+   * Create shapes and bindings together for proper arrow connections
+   */
+  createShapesWithBindings(shapes: CanvasShape[], bindings?: CanvasBinding[]) {
+    return this.run((ed) => {
+      // Create all shapes
+      ed.createShapes(shapes);
+      
+      // Bindings are now embedded in arrow props (TLDraw v2 format)
+      // No separate createBindings call needed
+      if (bindings && bindings.length > 0) {
+        console.log(`[EditorController] ${bindings.length} bindings provided (embedded in arrow props)`);
+      }
+    });
   }
 
   deleteShapes(ids: string[]) {

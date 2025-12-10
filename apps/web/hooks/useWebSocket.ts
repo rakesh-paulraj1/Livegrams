@@ -2,15 +2,12 @@ import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { createAuthenticatedWebSocket } from '../utils/websocket';
 
-/**
- * Custom hook to create and manage WebSocket connection using NextAuth session
- */
+
 export function useWebSocket(roomId: number) {
   const { data: session, status } = useSession();
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    // Only create WebSocket if session is available
     if (status === 'authenticated' && session && roomId) {
       const socket = createAuthenticatedWebSocket(roomId, session);
       

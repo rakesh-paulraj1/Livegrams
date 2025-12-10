@@ -1,15 +1,13 @@
 
 
 import { NextResponse, NextRequest } from "next/server";
-import { runLayoutAgent } from "../../../langchain1/graph/layout-agent";
+import { runPrimitiveAgent } from "../../../langchain1/agentt";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const message = body?.message || "";
-    const canvasImage = body?.canvasImage;
-    const existingLayout = body?.existingLayout;
-    const useValidation = body?.useValidation !== false; // Default to true
+    const canvasContext = body?.canvasContext;
 
     if (!message.trim()) {
       return NextResponse.json(
@@ -21,18 +19,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Use new Layout Agent (no node-canvas!)
-    const result = await runLayoutAgent({
+    const result = await runPrimitiveAgent({
       userRequest: message,
-      canvasImage,
-      existingLayout,
-      maxAttempts: useValidation ? 3 : 1,
+      canvasContext,
     });
 
     console.log("Draw API Response:", result.success ? "SUCCESS" : "FAILED");
-    if (result.stats) {
-      console.log(`Stats: ${result.stats.attempts} attempts, valid: ${result.stats.isValid}`);
-    }
 
     return NextResponse.json(result);
   } catch (error) {
