@@ -26,7 +26,6 @@ export default function Hero({ onStartClick }: HeroProps) {
       <section className="relative overflow-hidden min-h-screen flex flex-col">
         <div className="container mx-auto px-4 py-24 sm:py-32 relative z-10 flex-1 flex flex-col">
           <div className="mx-auto max-w-4xl text-center flex-1 flex flex-col justify-center">
-            {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -38,8 +37,6 @@ export default function Hero({ onStartClick }: HeroProps) {
                 Collaborative Drawing Platform
               </div>
             </motion.div>
-
-            {/* Main Heading */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -47,12 +44,11 @@ export default function Hero({ onStartClick }: HeroProps) {
               className="mb-8"
             >
               <h1 id="main-title" className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
-                Reach <strong>creators</strong> <span>&</span> <br />
-                <strong>developers</strong> <em className="italic">effortlessly</em>
+                Create <strong>diagrams with AI  </strong> <span>&</span> <br />
+                <strong>Colaborate</strong> <em className="italic">effortlessly</em>
               </h1>
             </motion.div>
 
-            {/* Description */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -69,7 +65,6 @@ export default function Hero({ onStartClick }: HeroProps) {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex flex-col items-center gap-6"
             >
-              {/* Decorative Elements */}
               <svg
                 width="100"
                 height="50"

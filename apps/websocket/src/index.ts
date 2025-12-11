@@ -100,7 +100,6 @@ wss.on("connection", function connection(ws, request) {
           }
         }
       });
-      console.log(`[WS] Broadcasted ${messageData.type} message to ${broadcastCount} clients`);
     } catch (error) {
       console.error('[WS] Error processing WebSocket message:', error);
     }

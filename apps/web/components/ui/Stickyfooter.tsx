@@ -1,6 +1,7 @@
 "use client"
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
+import Link from "next/link"
 
 export function StickyFooter() {
   const [isAtBottom, setIsAtBottom] = useState(false)
@@ -50,26 +51,39 @@ export function StickyFooter() {
               transition={{ duration: 0.6, delay: 0.1 }}
             >
               <ul className="space-y-2">
-                <li className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline">
-                  Home
-                </li>
-                <li className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline">
-                  Docs
-                </li>
-                <li className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline">
-                  Components
+                <li className="cursor-pointer transition-colors">
+                  <a
+                    href="https://www.rakeshpaulraj.me/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline"
+                  >
+                    Created By Rakesh
+                  </a>
                 </li>
               </ul>
               <ul className="space-y-2">
-                <li className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline">
-                  Github
+                <li>
+                  <a
+                    href="https://github.com/rakesh-paulraj1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline"
+                  >
+                    Github
+                  </a>
                 </li>
-                <li className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline">
-                  Twitter
+                <li>
+                  <a
+                    href="https://x.com/rakeshpaulraj"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline"
+                  >
+                    Twitter
+                  </a>
                 </li>
-                <li className="cursor-pointer transition-colors text-[#121113] hover:text-[#121113]/80 hover:underline">
-                  Discord
-                </li>
+             
               </ul>
             </motion.div>
             <motion.h2

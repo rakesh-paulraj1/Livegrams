@@ -6,21 +6,23 @@ export default function ConnectionUI({
   saveStatus, 
   onSave,
   roomId,
+  roomSlug,
 }: { 
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   isSaving: boolean;
   saveStatus: 'idle' | 'success' | 'error';
   onSave: () => void;
   roomId?: string;
+  roomSlug?: string;
 }) {
   const [copied, setCopied] = React.useState(false)
   const copyTimeoutRef = React.useRef<number | null>(null)
 
   const handleShare = async () => {
-    if (!roomId) return
+    if (!roomSlug) return
     try {
-      const slugToCopy = String(roomId)
-      await navigator.clipboard.writeText(slugToCopy)
+      const linkToCopy = `${window.location.origin}/setup/${roomSlug}`;
+      await navigator.clipboard.writeText(linkToCopy);
       setCopied(true)
       if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current)
       copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000)
@@ -59,7 +61,7 @@ export default function ConnectionUI({
       </div>
 
      
-      {roomId && (
+      {roomSlug && (
         <div className="absolute top-4 right-44 z-[300] flex items-center space-x-2">
           <button
             onClick={handleShare}
@@ -69,7 +71,7 @@ export default function ConnectionUI({
              Share
           </button>
           {copied && (
-            <div className="text-sm text-green-600 font-medium">Slug copied!</div>
+            <div className="text-sm text-green-600 font-medium">Link copied!</div>
           )}
         </div>
       )}
@@ -87,6 +89,9 @@ export default function ConnectionUI({
       >
         {isSaving ? 'Saving...' : saveStatus === 'success' ? '✓ Saved!' : saveStatus === 'error' ? '✗ Error' : '💾 Save'}
       </button>
+         <div className="fixed bottom-4 right-4 z-50 text-xs text-gray-500 bg-white/80 px-3 py-1 rounded shadow">
+              Created by <a href="https://tldraw.com" target="_blank" rel="noopener noreferrer" className="underline">tldraw</a>
+            </div>
     </>
   );
 }

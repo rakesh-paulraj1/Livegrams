@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Ensure tldraw and its subpackages are transpiled to avoid duplicate instances
+    allowedDevOrigins: ['192.168.29.232'],
     transpilePackages: [
       'tldraw',
       '@tldraw/editor',

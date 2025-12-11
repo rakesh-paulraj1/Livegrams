@@ -13,9 +13,10 @@ import { useSaveSnapshot } from '../hooks/useSaveSnapshot';
 
 interface TldrawMultiplayerProps {
   roomId: string;
+  roomSlug:string
 }
 
-export function TldrawMultiplayer({ roomId }: TldrawMultiplayerProps) {
+export function TldrawMultiplayer({ roomId,roomSlug}: TldrawMultiplayerProps) {
   const { data: session } = useSession();
   
   const storeWithStatus = useTldrawStore(roomId);
@@ -69,7 +70,7 @@ export function TldrawMultiplayer({ roomId }: TldrawMultiplayerProps) {
           isSaving={isSaving}
           saveStatus={saveStatus}
           onSave={saveSnapshot}
-          roomId={roomId}
+          roomSlug={roomSlug}
         />
       </Tldraw>
     </div>

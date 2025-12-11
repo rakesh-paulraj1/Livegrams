@@ -20,6 +20,7 @@
     "@langchain/textsplitters": "^1.0.0",
     "@prisma/client": "6.15.0",
     "@repo/ui": "workspace:*",
+    "@tabler/icons-react": "^3.35.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@tldraw/state": "^4.1.1",
     "@tldraw/tlschema": "^4.1.1",

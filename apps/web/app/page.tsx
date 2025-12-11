@@ -10,7 +10,8 @@ import { AndroidDemo } from "../components/Android";
 import FeatureCluster from "../components/FeatureCluster";
 import { StickyFooter } from "../components/ui/Stickyfooter";
 import Link from "next/link";
-
+import Toast from "../components/ui/Toast";
+import Image from "next/image";
 function generateSlug() {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   const seg = (n: number) =>
@@ -25,6 +26,7 @@ export default function App() {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedBoardType, setSelectedBoardType] = useState<"interactive" | "ai">("interactive");
   const [copiedRoomId, setCopiedRoomId] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type?: "info"|"error"|"success"|"loading" } | null>(null);
 
   const router = useRouter();
   const { data: session, status } = useSession()
@@ -78,44 +80,62 @@ export default function App() {
   const handleCreateRoom = async () => {
     if (!generatedRoomId) return;
     setIsCreating(true);
+    setToast({ message: "Creating room...", type: "loading" });
     try {
       const response = await fetch(`/api/server/createroom/${generatedRoomId}`, {
         method: "POST",
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        router.push(`/setup/${data.slug ?? generatedRoomId}`);
+        setToast({ message: "Room created! Redirecting...", type: "success" });
+        setTimeout(() => {
+          router.push(`/setup/${data.slug ?? generatedRoomId}`);
+        }, 800);
       } else {
         setIsCreating(false);
-        alert(data.message || "Failed to create room. Please try again.");
+        setToast({ message: data.message || "Failed to create room. Please try again.", type: "error" });
       }
     } catch (error) {
       console.error("Error creating room:", error);
       setIsCreating(false);
-      alert("Network error. Please check your connection and try again.");
+      setToast({ message: "Network error. Please check your connection and try again.", type: "error" });
     }
   };
 
   const handleJoinRoom = async (id: string) => {
-    if (!id.trim()) return;
+    if (!id.trim()) {
+      setToast({ message: "Please enter a valid room ID.", type: "error" });
+      return;
+    }
+    setToast({ message: "Joining room...", type: "loading" });
     try {
       const response = await fetch(`/api/server/joinroom/${id}`, {
         method: "POST",
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        router.push(`/setup/${id}`);
+        setToast({ message: "Joined room! Redirecting...", type: "success" });
+        setTimeout(() => {
+          router.push(`/setup/${id}`);
+        }, 800);
       } else {
-        alert(data.message || "Failed to join room. Please check the room ID and try again.");
+        setToast({ message: data.message || "Failed to join room. Please check the room ID and try again.", type: "error" });
       }
     } catch (error) {
       console.error("Error joining room:", error);
-      alert("Network error. Please check your connection and try again.");
+      setToast({ message: "Network error. Please check your connection and try again.", type: "error" });
     }
   };
 
   return (
     <div className="min-h-screen w-full bg-[#faf9f6] relative">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div
         className="absolute inset-0 z-0"
         style={{
@@ -231,17 +251,19 @@ export default function App() {
                           {roomsLoading ? (
                             <p className="text-xs text-gray-500">Loading...</p>
                           ) : rooms.length ? (
-                            <div className="grid grid-cols-1 gap-2 mb-3">
-                              {rooms.map((r) => (
-                                <button
-                                  key={r.id}
-                                  onClick={() => handleJoinRoom(r.id)}
-                                  className="text-left px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm"
-                                >
-                                  {r.name ?? r.id}
-                                </button>
-                              ))}
-                            </div>
+                           <div className="mb-3 h-27 overflow-y-auto">
+  <div className="grid grid-cols-1 gap-2">
+    {rooms.map((r) => (
+      <button
+        key={r.id}
+        onClick={() => handleJoinRoom(r.id)}
+        className="text-left px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm"
+      >
+        {r.name ?? r.id}
+      </button>
+    ))}
+  </div>
+</div>
                           ) : (
                             <p className="text-xs text-gray-500">You have not created any rooms yet.</p>
                           )}
@@ -302,25 +324,21 @@ export default function App() {
       
         <Hero onStartClick={() => setIsDialogOpen(true)} />
 
-        {/* Device preview: show Safari on md+ and Android on small screens */}
         <section className="py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
-            {/* Desktop / Tablet preview */}
             <div className="hidden md:flex w-full justify-center">
+              
               <SafariDemo />
             </div>
 
-            {/* Mobile preview */}
             <div className="flex md:hidden w-full justify-center">
               <AndroidDemo />
             </div>
           </div>
         </section>
 
-        {/* Feature cluster (animated) placed below device previews */}
         <FeatureCluster />
 
-        {/* Footer */}
         <StickyFooter />
       </div>
     </div>

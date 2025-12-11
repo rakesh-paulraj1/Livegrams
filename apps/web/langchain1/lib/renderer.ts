@@ -260,45 +260,21 @@ class PrimitiveRenderer {
   }> = [];
 
   private renderArrow(primitive: ArrowPrimitive): TLDrawShape {
-    const start = primitive.start || { x: primitive.x || 0, y: primitive.y || 0 };
-    const end = primitive.end || { x: (start.x || 0) + 100, y: (start.y || 0) };
+    const safeStart = primitive.start && typeof primitive.start.x === 'number' && typeof primitive.start.y === 'number'
+      ? primitive.start
+      : { x: primitive.x || 0, y: primitive.y || 0 };
+    const safeEnd = primitive.end && typeof primitive.end.x === 'number' && typeof primitive.end.y === 'number'
+      ? primitive.end
+      : { x: (safeStart.x || 0) + 100, y: (safeStart.y || 0) };
     const arrowId = this.generateId("arrow");
-    
-    let startProp: Record<string, unknown> = { x: 0, y: 0 };
-    let endProp: Record<string, unknown> = { x: end.x - start.x, y: end.y - start.y };
-    
-    if (primitive.fromLabel) {
-      const fromShapeId = this.labelToShapeId.get(primitive.fromLabel.toLowerCase());
-      if (fromShapeId) {
-        startProp = {
-          type: "binding",
-          boundShapeId: fromShapeId,
-          normalizedAnchor: { x: 0.5, y: 1 }, 
-          isExact: false,
-          isPrecise: false
-        };
-      }
-    }
-    
-    if (primitive.toLabel) {
-      const toShapeId = this.labelToShapeId.get(primitive.toLabel.toLowerCase());
-      if (toShapeId) {
-        endProp = {
-          type: "binding",
-          boundShapeId: toShapeId,
-          normalizedAnchor: { x: 0.5, y: 0 }, 
-          isExact: false,
-          isPrecise: false
-        };
-      }
-    }
-
+    const startProp: Record<string, unknown> = { x: 0, y: 0 };
+    const endProp: Record<string, unknown> = { x: safeEnd.x - safeStart.x, y: safeEnd.y - safeStart.y };
     return {
       id: arrowId,
       typeName: "shape",
       type: "arrow",
-      x: start.x,
-      y: start.y,
+      x: safeStart.x,
+      y: safeStart.y,
       rotation: 0,
       opacity: 1,
       isLocked: false,
@@ -480,7 +456,6 @@ class PrimitiveRenderer {
     const shapes: TLDrawShape[] = [];
     const arrowPrimitives: ArrowPrimitive[] = [];
 
-    // First pass: render all non-arrow shapes (to populate labelToShapeId)
     for (const primitive of primitives) {
       if (primitive.shape === "arrow") {
         arrowPrimitives.push(primitive as ArrowPrimitive);
@@ -494,13 +469,11 @@ class PrimitiveRenderer {
       }
     }
 
-    // Second pass: render arrows (now labelToShapeId is populated)
     for (const arrowPrimitive of arrowPrimitives) {
       const result = this.renderArrow(arrowPrimitive);
       shapes.push(result);
     }
 
-    // Bindings are no longer needed - binding is embedded in arrow props
     const bindings: TLArrowBinding[] = [];
 
     return { shapes, bindings };

@@ -172,39 +172,39 @@ export default function Header() {
         </button>
       </header>
 
-      {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm md:hidden">
           <div className="absolute top-20 left-4 right-4 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl p-6">
             <nav className="flex flex-col space-y-4">
-              <button
-                onClick={() => handleMobileNavClick("features")}
-                className="text-left px-4 py-3 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-50"
-              >
-                Features
-              </button>
-              <button
-                onClick={() => handleMobileNavClick("pricing")}
-                className="text-left px-4 py-3 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-50"
-              >
-                Pricing
-              </button>
-              <button
-                onClick={() => handleMobileNavClick("testimonials")}
-                className="text-left px-4 py-3 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-50"
-              >
-                Testimonials
-              </button>
-              <button
-                onClick={() => handleMobileNavClick("faq")}
-                className="text-left px-4 py-3 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-50"
-              >
-                FAQ
-              </button>
+            
               <div className="border-t border-gray-200 pt-4 mt-4 flex flex-col space-y-3">
                 {status === "authenticated" && session?.user ? (
                   <>
+                   <div className="px-4 py-2 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">Your rooms</p>
+                    {roomsLoading ? (
+                      <p className="text-xs text-gray-500 mt-2">Loading...</p>
+                    ) : rooms.length ? (
+                      <ul className="max-h-40 overflow-auto mt-2 space-y-2">
+                        {rooms.map((r) => (
+                          <li key={r.id}>
+                            <Link
+                              href={`/setup/${r.id}`}
+                              className="block text-sm text-gray-700 hover:bg-gray-50 px-2 py-1 rounded"
+                              onClick={() => setIsUserMenuOpen(false)}
+                            >
+                              {r.name ?? r.id}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-2">You have not created any rooms yet.</p>
+                    )}
+                  </div>
+                  
                     <div className="px-4 py-2 border-b border-gray-100">
+                      
                       <p className="text-sm font-medium text-gray-900">{session?.user?.name}</p>
                       <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
                     </div>

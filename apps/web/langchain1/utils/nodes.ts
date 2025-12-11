@@ -1,11 +1,11 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { PrimitiveOutputSchema, PRIMITIVE_GENERATOR_PROMPT } from "../lib/llm-prompt";
+import { PrimitiveOutputSchema } from "../lib/llm-prompt";
 import { validatePrimitives, type DiagramType } from "../lib/primitive-validator";
 import { Primitive } from "../lib/primitives";
 import { renderPrimitives } from "../lib/renderer";
 import { AgentStateType } from "./states";
-
+import { RESPONSE_FORMAT_RULES,CORE_CONTENT_GENERATOR } from "../lib/llm-prompt";
 const model = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash",
   apiKey: process.env.GEMINI_API_KEY!,
@@ -36,8 +36,16 @@ Please fix these issues and regenerate.
 `;
   }
 
+  let MAIN_PROMPT=RESPONSE_FORMAT_RULES;
+   
+
+  if(state.attempts==0){
+    MAIN_PROMPT+=CORE_CONTENT_GENERATOR;
+  }
+
+
   const messages = [
-    new SystemMessage(PRIMITIVE_GENERATOR_PROMPT),
+    new SystemMessage(MAIN_PROMPT),
     new HumanMessage(promptText),
   ];
 
@@ -45,7 +53,6 @@ Please fix these issues and regenerate.
     const output = await structuredModel.invoke(messages);
 
     if (!output || !output.items || !Array.isArray(output.items)) {
-      console.error("[Generate] Invalid output structure:", output);
       return {
         modeloutput: [],
         diagramtype: "freeform",
@@ -62,8 +69,10 @@ Please fix these issues and regenerate.
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("[Generate] LLM Error:", errorMsg);
-    const reply = "Error generating shapes. Please try a simpler request.";
+
+    const errorStack = error instanceof Error && error.stack ? error.stack : '';
+    console.error("[Generate] LLM Error:", errorMsg, errorStack);
+    const reply = `Error generating shapes. Please try a simpler request.\nDetails: ${errorMsg}`;
 
     return {
       modeloutput: [],

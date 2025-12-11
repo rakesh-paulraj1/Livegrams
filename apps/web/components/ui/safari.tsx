@@ -1,3 +1,4 @@
+import Image from "next/image"
 import type { HTMLAttributes } from "react"
 
 const SAFARI_WIDTH = 1203
@@ -53,32 +54,32 @@ export function Safari({
             height: `${HEIGHT_PCT}%`,
           }}
         >
-          <video
-            className="block size-full object-cover"
-            src={videoSrc}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-          />
+       
         </div>
       )}
 
-      {!hasVideo && imageSrc && (
-        <div
-          className="pointer-events-none absolute z-0 overflow-hidden"
-          style={{
-            left: `${LEFT_PCT}%`,
-            top: `${TOP_PCT}%`,
-            width: `${WIDTH_PCT}%`,
-            height: `${HEIGHT_PCT}%`,
-            borderRadius: "0 0 11px 11px",
-          }}
-        >
-         
-        </div>
-      )}
+    {!hasVideo && imageSrc && (
+  <div
+    className="pointer-events-none absolute z-0 overflow-hidden"
+    style={{
+      left: `${LEFT_PCT}%`,
+      top: `${TOP_PCT}%`,
+      width: `${WIDTH_PCT}%`,
+      height: `${HEIGHT_PCT}%`,
+      borderRadius: "0 0 11px 11px",
+    }}
+  >
+   <Image
+  src={imageSrc}
+  alt="Safari content"
+  width={SCREEN_WIDTH}
+  height={SCREEN_HEIGHT}
+  className="w-full h-full object-cover"
+  draggable={false}
+  unoptimized
+/>
+  </div>
+)}
 
       <svg
         viewBox={`0 0 ${SAFARI_WIDTH} ${SAFARI_HEIGHT}`}

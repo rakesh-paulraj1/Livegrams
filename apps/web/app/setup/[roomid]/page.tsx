@@ -18,7 +18,7 @@ export default async function SetupTldrawPage({ params }: { params: { roomid: st
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <TldrawMultiplayer roomId={String(room.id)} />
+      <TldrawMultiplayer roomSlug={String(roomSlug)} roomId={String(room.id)} />
     </div>
   );
 }
