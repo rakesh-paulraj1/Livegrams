@@ -1,18 +1,15 @@
-FROM node:24.0.0-alpine
+FROM node:lts AS build
 
-WORKDIR /src
+WORKDIR /usr/src/app
 
-COPY ./packages ./packages
-COPY ./package.json  ./package.json
-COPY ./package-lock.json ./package-lock.json
+COPY ./packages ./packages 
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/websocket ./apps/websocket
+
+RUN npm install -g pnpm \&& pnpm install --frozen-lockfile
 
 
-COPY ./apps/websocket ./apps/websocket
-
-
-RUN  pnpm run  install
-RUN  pnpm run build 
+RUN pnpm run build:ws
 
 EXPOSE 8080
-
-CMD ["pnpm", "run","start:websocket"]
+CMD ["pnpm", "run", "start:ws"]
