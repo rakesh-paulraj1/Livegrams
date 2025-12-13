@@ -1,9 +1,9 @@
 import { TldrawMultiplayer } from "../../../components/TldrawMultiplayer";
 import { prismaClient } from '@repo/db/client';
 
-export default async function SetupTldrawPage({ params }: { params: { roomid: string } }) {
+export default async function SetupTldrawPage({ params }: { params: Promise<{ roomid: string }> }) {
  
-  const { roomid: roomSlug } = params;
+  const { roomid: roomSlug } =  await params;
 
   const room = await prismaClient.room.findUnique({ where: { slug: roomSlug } });
 

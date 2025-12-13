@@ -1,4 +1,3 @@
-import Image from "next/image"
 import type { HTMLAttributes } from "react"
 
 const SAFARI_WIDTH = 1203
@@ -69,15 +68,7 @@ export function Safari({
       borderRadius: "0 0 11px 11px",
     }}
   >
-   <Image
-  src={imageSrc}
-  alt="Safari content"
-  width={SCREEN_WIDTH}
-  height={SCREEN_HEIGHT}
-  className="w-full h-full object-cover"
-  draggable={false}
-  unoptimized
-/>
+
   </div>
 )}
 

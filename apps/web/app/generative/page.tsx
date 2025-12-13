@@ -1,17 +1,16 @@
 "use client"
 
-import React, {  useRef } from 'react'
-import { Tldraw, toRichText } from 'tldraw'
+import React, { useRef } from 'react'
+import { Tldraw, toRichText,type Editor } from 'tldraw'
+
 import 'tldraw/tldraw.css'
-import CanvasAssistant from '../../components/CanvasAssistant'
 import Canvas from '../../components/Canvas'
 
 export default function App() {
-	const editorRef = useRef<any | null>(null)
+	const editorRef = useRef<Editor>(null)
 
-	const handleMount = (editor: any) => {
+	const handleMount = (editor: Editor) => {
 		editorRef.current = editor
-
 		editor.createShape({
 			type: 'text',
 			x: 200,

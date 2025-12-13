@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import {  NextResponse } from 'next/server';
 import { prismaClient } from '@repo/db/client';
 
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { roomId: string } }
+  request: Request,
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const roomId = parseInt((await params).roomId);
@@ -44,10 +44,9 @@ export async function GET(
   }
 }
 
-// POST - Save the Tldraw snapshot for a room
 export async function POST(
-  request: NextRequest,
-  { params }: { params: { roomId: string } }
+  request: Request,
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
     const roomId = parseInt((await params).roomId);

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prismaClient } from '@repo/db/client';
 import { getServerSession } from 'next-auth';
 import { authentication } from '../../../../../lib/auth';
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { slug: string } }
+  req: Request,
+  { params }: { params: Promise<{ slug: string }> }
 ) {
  
   const session = await getServerSession(authentication);

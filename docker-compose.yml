@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  ws:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.ws
+    ports:
+      - "8080:8080"
+    env_file:
+      - packages/db/.env
+    volumes:
+      - ./:/usr/src/app
+
+  web:
+    build:
+      context: .
+      dockerfile: Docker/Dockerfile.web
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/web/.env
+    volumes:
+      - ./:/usr/src/app
+

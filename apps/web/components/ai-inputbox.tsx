@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Paperclip, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState } from "react";
 import {useAutoResizeTextarea} from "../hooks/textareahook";
 import { cn } from "../utils/cn";
@@ -93,13 +93,7 @@ export default function AI_Input({ value: controlledValue, onChange, onSubmit }:
                     </div>
 
                     <div className="h-12 bg-black/5  rounded-b-xl">
-                        <div className="absolute left-3 bottom-3 flex items-center gap-2">
-                            <label className="cursor-pointer rounded-lg p-2 bg-black/5 ">
-                                <input type="file" className="hidden" />
-                                <Paperclip className="w-4 h-4 text-black/40  hover:text-black  transition-colors" />
-                            </label>
-                            
-                        </div>
+                       
                         <div className="absolute right-3 bottom-3">
                             <button
                                 type="button"

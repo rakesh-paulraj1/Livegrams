@@ -51,16 +51,7 @@ export default function Header() {
     }
   }, [isUserMenuOpen, status, session])
 
-  const handleMobileNavClick = (sectionId: string) => {
-    setIsMobileMenuOpen(false);
-    const element = document.getElementById(sectionId);
-    if (element) {
-      const headerOffset = 120;
-      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-      const offsetPosition = elementPosition - headerOffset;
-      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-    }
-  };
+
 
   return (
     <>

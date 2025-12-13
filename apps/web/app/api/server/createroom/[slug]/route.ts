@@ -1,20 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prismaClient } from '@repo/db/client';
 import { getServerSession } from 'next-auth';
 import { authentication } from '../../../../../lib/auth';
  
 
-type Params = {
-  params: {
-    slug: string;
-  };
-};
-
-export async function POST(req: NextRequest, { params }: Params) {
-    const  session= await  getServerSession(authentication)
+export async function POST(req: Request,  { params }: { params: Promise<{ slug: string }> }) {
+  const session = await getServerSession(authentication)
 
   try {
-    const { slug } = await params;
+    const { slug } = await params
 
     if (!slug || slug.trim().length === 0) {
       return NextResponse.json(
@@ -25,7 +19,6 @@ export async function POST(req: NextRequest, { params }: Params) {
 
 
     try {
-      // Check if room with this slug already exists
       const existingRoom = await prismaClient.room.findUnique({
         where: { slug: slug.trim() }
       });

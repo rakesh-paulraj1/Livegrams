@@ -5,7 +5,6 @@ export default function ConnectionUI({
   isSaving, 
   saveStatus, 
   onSave,
-  roomId,
   roomSlug,
 }: { 
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';

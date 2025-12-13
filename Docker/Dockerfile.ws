@@ -1,13 +1,15 @@
-FROM node:lts AS build
+FROM node:20-slim
 
 WORKDIR /usr/src/app
 
-COPY ./packages ./packages 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+COPY packages ./packages
 COPY apps/websocket ./apps/websocket
 
-RUN npm install -g pnpm \&& pnpm install --frozen-lockfile
-
+RUN corepack enable \
+  && corepack prepare pnpm@9.0.0 --activate \
+  && pnpm install --frozen-lockfile
 
 RUN pnpm run build:ws
 

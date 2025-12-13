@@ -1,14 +1,9 @@
-/**
- * Get JWT token from session object
- */
+
 export function getJWTTokenFromSession(session: any): string | null {
   if (!session || !session.accessToken) return null;
   return session.accessToken;
 }
 
-/**
- * Create WebSocket connection with JWT authentication using session
- */
 export function createAuthenticatedWebSocket(roomId: number, session: any): WebSocket | null {
   const token = getJWTTokenFromSession(session);
   
@@ -16,7 +11,7 @@ export function createAuthenticatedWebSocket(roomId: number, session: any): WebS
     console.error('No JWT token found in session. Please log in first.');
     return null;
   }
-  const ws_url=process.env.NEXT_PUBLIC_WS_URL 
+  const ws_url=process.env.WS_URL 
   
   const wsUrl = `${ws_url}?token=${encodeURIComponent(token)}&roomId=${roomId}`;
   

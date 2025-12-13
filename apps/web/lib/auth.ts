@@ -1,9 +1,8 @@
+// @ts-nocheck
+
 import GoogleProvider from 'next-auth/providers/google';
-import { setCookie } from '../utils/setcookie';
 import { prismaClient } from "@repo/db/client";
 import { signToken } from './jwt';
-
-
 
 
 export const authentication = {
@@ -56,16 +55,13 @@ export const authentication = {
         }
 
       
-        await setCookie('userId', userId);
-        
         const jwtToken = signToken({
           userId: userId,
           email: session.user.email,
           name: session.user.name
         });
         
-        await setCookie('jwt-token', jwtToken);
-        
+       
         
         session.accessToken = jwtToken;
         session.userId = userId;

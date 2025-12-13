@@ -11,7 +11,6 @@ import FeatureCluster from "../components/FeatureCluster";
 import { StickyFooter } from "../components/ui/Stickyfooter";
 import Link from "next/link";
 import Toast from "../components/ui/Toast";
-import Image from "next/image";
 function generateSlug() {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   const seg = (n: number) =>

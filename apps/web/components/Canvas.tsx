@@ -3,7 +3,11 @@ import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { cn } from "../utils/cn";
 import { EditorController } from '../langchain1/lib/editorcontroller';
 import AI_Input from './ai-inputbox'
+import type { Editor } from 'tldraw'
 
+interface CanvasProps {
+  editor?: React.RefObject<Editor | null>
+}
 interface DrawingMessage {
   id: number
   text: string
@@ -48,7 +52,7 @@ interface DrawingResponse {
   }
 }
 
-const Canvas = ({editor}: { editor?: React.RefObject<HTMLDivElement> }) => {
+const Canvas = ({editor}: CanvasProps) => {
   
   const [messages, setMessages] = useState<DrawingMessage[]>([
     { 
