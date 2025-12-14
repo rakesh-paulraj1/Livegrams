@@ -1,20 +1,72 @@
-FROM node:20-bookworm-slim
+FROM node:20-slim AS base
 
-WORKDIR /usr/src/app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+# Install OpenSSL and other necessary packages
+RUN apt-get update -y && \
+    apt-get install -y openssl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
+# Install pnpm globally
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-  
-COPY ./packages ./packages
-COPY ./apps/web ./apps/web
+# Dependencies stage
+FROM base AS deps
+WORKDIR /app
 
-RUN npm install -g pnpm
+# Copy workspace configuration files
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 
+# Copy all packages and apps
+COPY packages ./packages
+COPY apps ./apps
+
+# Install dependencies
 RUN pnpm install --frozen-lockfile
 
+# Generate Prisma Client
 RUN pnpm run db:generate
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+
+# Copy installed dependencies
+COPY --from=deps /app ./
+
+# Build the web app
 RUN pnpm run build:web
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy necessary files for production
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+
+# Copy built web app
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/apps/web/next.config.* ./apps/web/
+
+# Copy packages (especially db with Prisma)
+COPY --from=builder /app/packages ./packages
+
+# Copy node_modules (includes Prisma binaries)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
+
+# Ensure Prisma Client is accessible
+RUN if [ -d "packages/db/node_modules/.prisma" ]; then \
+      mkdir -p apps/web/node_modules/.prisma && \
+      cp -r packages/db/node_modules/.prisma/* apps/web/node_modules/.prisma/ 2>/dev/null || true; \
+    fi
 
 EXPOSE 3000
 

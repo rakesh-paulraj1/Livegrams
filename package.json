@@ -7,11 +7,11 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "start:web":"cd apps/web && pnpm run start",
-     "start:ws":"cd apps/websocket && pnpm run start",
+    "start:web": "cd apps/web && pnpm run start",
+    "start:ws": "cd apps/websocket && pnpm run start",
     "build:ws": "cd apps/websocket && pnpm run build",
     "build:web": "cd apps/web && pnpm run build",
-    "db:generate": "cd packages/db && npx prisma generate && cd  ../..",
+    "db:generate": "cd packages/db && npx prisma generate  && cd  ../..",
     "db:push": "cd packages/db && pnpm push",
     "db:migrate": "cd packages/db && pnpm migrate"
   },
@@ -20,7 +20,7 @@
     "drizzle-kit": "^0.31.4",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
-    "turbo": "^2.5.6",
+    "turbo": "^2.6.3",
     "typescript": "5.9.2"
   },
   "packageManager": "pnpm@9.0.0",
