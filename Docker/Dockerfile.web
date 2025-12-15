@@ -1,73 +1,54 @@
-FROM node:20-slim AS base
+FROM node:20-bookworm-slim AS base
+
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-# Install OpenSSL and other necessary packages
-RUN apt-get update -y && \
-    apt-get install -y openssl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install pnpm globally
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-# Dependencies stage
 FROM base AS deps
 WORKDIR /app
 
-# Copy workspace configuration files
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
+COPY packages ./packages/
+COPY apps/web ./apps/web
 
-# Copy all packages and apps
-COPY packages ./packages
-COPY apps ./apps
-
-# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Generate Prisma Client
-RUN pnpm run db:generate
 
-# Build stage
+RUN pnpm db:generate
+
 FROM base AS builder
 WORKDIR /app
 
-# Copy installed dependencies
 COPY --from=deps /app ./
 
-# Build the web app
+
 RUN pnpm run build:web
 
-# Production stage
-FROM base AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
 
-# Copy necessary files for production
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/pnpm-workspace.yaml ./
-COPY --from=builder /app/pnpm-lock.yaml ./
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy built web app
-COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
-COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
-COPY --from=builder /app/apps/web/next.config.* ./apps/web/
 
-# Copy packages (especially db with Prisma)
-COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/packages/db ./packages/db
 
-# Copy node_modules (includes Prisma binaries)
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
-
-# Ensure Prisma Client is accessible
-RUN if [ -d "packages/db/node_modules/.prisma" ]; then \
-      mkdir -p apps/web/node_modules/.prisma && \
-      cp -r packages/db/node_modules/.prisma/* apps/web/node_modules/.prisma/ 2>/dev/null || true; \
-    fi
 
 EXPOSE 3000
 
-CMD ["pnpm", "run", "start:web"]
+CMD ["node", "apps/web/server.js"]
