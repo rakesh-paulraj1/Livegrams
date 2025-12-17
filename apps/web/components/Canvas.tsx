@@ -233,7 +233,7 @@ const Canvas = ({editor}: CanvasProps) => {
       )}>
         <button
           onClick={() => setIsOpen(false)}
-          className="lg:hidden absolute top-4 right-4 z-10 text-slate-500 hover:text-slate-700"
+          className="lg:hidden absolute top-14  right-4 z-10 text-slate-500 hover:text-slate-700"
           aria-label="Close assistant"
         >
           <svg 
@@ -252,7 +252,7 @@ const Canvas = ({editor}: CanvasProps) => {
           </svg>
         </button>
 
-        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 font-semibold text-slate-700">Canvas Assistant</div>
+        <div className="px-4 pt-14 py-3 border-b border-slate-100 bg-slate-50 font-semibold text-slate-700">Canvas Assistant</div>
 
         <div ref={messageListRef} className="p-4 overflow-y-auto flex-1 bg-white">
           {messages.map((m) => (
@@ -281,6 +281,7 @@ const Canvas = ({editor}: CanvasProps) => {
             value={inputText}
             onChange={setInputText}
             onSubmit={handleSend}
+            isOpen={isOpen}
           />
         </form>
       </aside>

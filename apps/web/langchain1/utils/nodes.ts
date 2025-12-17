@@ -1,4 +1,6 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+
+
+import { getGeminiModel } from "../lib/gemini";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { PrimitiveOutputSchema } from "../lib/llm-prompt";
 import { validatePrimitives, type DiagramType } from "../lib/primitive-validator";
@@ -6,10 +8,11 @@ import { Primitive } from "../lib/primitives";
 import { renderPrimitives } from "../lib/renderer";
 import { AgentStateType } from "./states";
 import { RESPONSE_FORMAT_RULES,CORE_CONTENT_GENERATOR } from "../lib/llm-prompt";
-const model = new ChatGoogleGenerativeAI({
-  model: "gemini-2.5-flash",
-  apiKey: process.env.GEMINI_API_KEY!,
-});
+
+
+
+const model = getGeminiModel();
+
 
 const structuredModel = model.withStructuredOutput(PrimitiveOutputSchema);
 

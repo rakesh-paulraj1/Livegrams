@@ -212,12 +212,7 @@ export default function Header() {
                   </>
                 ) : (
                   <>
-                    <a
-                      onClick={() => signIn()}
-                      className="px-4 py-3 text-lg font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-50 cursor-pointer"
-                    >
-                      Log In
-                    </a>
+                   
                     <a
                       onClick={() => signIn()}
                       className="px-4 py-3 text-lg font-bold text-center bg-gradient-to-b from-gray-900 to-gray-800 text-white rounded-lg shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"

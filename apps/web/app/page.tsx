@@ -326,7 +326,7 @@ export default function App() {
         <section className="py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
             <div className="hidden md:flex w-full justify-center">
-              
+             
               <SafariDemo />
             </div>
 

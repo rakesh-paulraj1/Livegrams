@@ -28,7 +28,6 @@ export async function GET(
       );
     }
 
-    // Parse the stored JSON data
     const snapshot = JSON.parse(store.storedata);
 
     return NextResponse.json({
@@ -68,7 +67,6 @@ export async function POST(
       );
     }
 
-    // Check if room exists
     const room = await prismaClient.room.findUnique({
       where: { id: roomId },
     });

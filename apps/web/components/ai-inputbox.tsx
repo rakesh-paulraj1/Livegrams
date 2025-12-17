@@ -10,10 +10,11 @@ type ChatInputProps = {
   value?: string;
   onChange?: (v: string) => void;
   onSubmit?: () => void;
+    isOpen?: boolean;
 };
 
-export default function AI_Input({ value: controlledValue, onChange, onSubmit }: ChatInputProps) {
-    const [internalValue, setInternalValue] = useState("");
+export default function AI_Input({ value: controlledValue, onChange, onSubmit, isOpen }: ChatInputProps) {
+        const [internalValue, setInternalValue] = useState("");
     const { textareaRef, adjustHeight } = useAutoResizeTextarea({
         minHeight: 52,
         maxHeight: 200,
@@ -49,7 +50,7 @@ export default function AI_Input({ value: controlledValue, onChange, onSubmit }:
     };
 
     return (
-        <div className="w-full py-4">
+        <div className={cn("w-full", isOpen ? "py-14" : "py-4")}>
             <div className="relative w-full">
                 <div
                     role="textbox"
@@ -71,7 +72,10 @@ export default function AI_Input({ value: controlledValue, onChange, onSubmit }:
                             id="ai-input-04"
                             value={value}
                             placeholder="Ask a question about your PDF..."
-                            className="w-full rounded-xl rounded-b-none px-4 py-3 bg-black/5 border-none text-black/70  resize-none focus-visible:ring-0 leading-[1.2]"
+                            className={cn(
+                                "w-full rounded-xl rounded-b-none px-4 bg-black/5 border-none text-black/70 resize-none focus-visible:ring-0 leading-[1.2]",
+                                isOpen ? "py-5" : "py-3"
+                            )}
                             ref={textareaRef}
                             onFocus={handleFocus}
                             onBlur={handleBlur}

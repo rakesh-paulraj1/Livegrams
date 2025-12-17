@@ -1,11 +1,12 @@
 import type { HTMLAttributes } from "react"
-
+import Image from "next/image"
 const SAFARI_WIDTH = 1203
 const SAFARI_HEIGHT = 753
 const SCREEN_X = 1
 const SCREEN_Y = 52
 const SCREEN_WIDTH = 1200
 const SCREEN_HEIGHT = 700
+
 
 // Calculated percentages
 const LEFT_PCT = (SCREEN_X / SAFARI_WIDTH) * 100
@@ -57,7 +58,7 @@ export function Safari({
         </div>
       )}
 
-    {!hasVideo && imageSrc && (
+    { imageSrc && (
   <div
     className="pointer-events-none absolute z-0 overflow-hidden"
     style={{
@@ -68,7 +69,14 @@ export function Safari({
       borderRadius: "0 0 11px 11px",
     }}
   >
-
+ <Image
+      src={imageSrc ?? '/livegrams.gif'}
+      width={SCREEN_WIDTH}
+      height={SCREEN_HEIGHT}
+      alt={url ?? 'safari-media'}
+      unoptimized
+      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+    />
   </div>
 )}
 

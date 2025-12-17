@@ -36,7 +36,7 @@ export function useWebSocketConnection({
           return;
         }
         
-        const WS_URL = process.env.WS_URL || 'ws://localhost:8080';
+        const WS_URL = process.env.NEXT_PUBLIC_WS_URL
         ws = new WebSocket(`${WS_URL}?token=${token}`);
         wsRef.current = ws;
         
@@ -93,7 +93,20 @@ export function useWebSocketConnection({
           },3000);
         };
       } catch (error) {
-        console.error('Error connecting to WebSocket:', error);
+                        // In Next.js, client-side env vars must be prefixed with NEXT_PUBLIC_
+                        // Use NEXT_PUBLIC_WS_URL in the browser. If it's not set, fall back
+                        // to the current origin converted to ws/wss.
+                        const publicWs = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_WS_URL as string | undefined) : undefined;
+                        const defaultOrigin = typeof window !== 'undefined'
+                          ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+                          : 'ws://localhost:8080';
+
+                        const WS_URL = publicWs ?? process.env.WS_URL ?? defaultOrigin;
+
+                        // Debugging: log resolved WS URL and room id when connecting
+                        // (helps when env var isn't picked up in client bundle)
+                        // eslint-disable-next-line no-console
+                        console.debug('[WS] connecting', { WS_URL, roomId });
         setConnectionStatus('error');
       }
     };
