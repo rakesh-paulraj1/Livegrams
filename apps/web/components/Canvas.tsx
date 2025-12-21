@@ -1,5 +1,5 @@
 "use client"
-import React, { useRef, useState, useMemo, useEffect } from 'react'
+import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react'
 import { cn } from "../utils/cn";
 import { EditorController } from '../langchain1/lib/editorcontroller';
 import AI_Input from './ai-inputbox'
@@ -64,24 +64,17 @@ const Canvas = ({editor}: CanvasProps) => {
   ])
   const [inputText, setInputText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-    const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   
-    const editorController = useMemo(() => {
-    return editor ? new EditorController(editor) : null
-  }, [editor])
-  
-  const messageListRef = useRef<HTMLDivElement>(null)
   const idRef = useRef(2)
   const lastRequestRef = useRef<string>('')
+  const messageListRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (messageListRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight
-    }
-  }, [messages])
+  const editorController = useMemo(() => {
+    return editor ? new EditorController(editor) : null
+  }, [editor])
 
-
-  const executeShapes = (shapes: DrawingResponse['tldrawShapes'], bindings?: DrawingResponse['bindings']): boolean => {
+  const executeShapes = useCallback((shapes: DrawingResponse['tldrawShapes'], bindings?: DrawingResponse['bindings']): boolean => {
     if (!editorController || !shapes) {
       console.error('No editor or shapes')
       return false
@@ -101,7 +94,6 @@ const Canvas = ({editor}: CanvasProps) => {
         props: { ...s.props }
       }))
 
-      // Create shapes with bindings for proper arrow connections
       if (bindings && bindings.length > 0) {
         editorController.createShapesWithBindings(shapesToCreate, bindings)
       } else {
@@ -112,7 +104,16 @@ const Canvas = ({editor}: CanvasProps) => {
       console.error('Error executing shapes:', err)
       return false
     }
-  }
+  }, [editorController]);
+
+
+  useEffect(() => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight
+    }
+  }, [messages])
+
+
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -140,64 +141,82 @@ const Canvas = ({editor}: CanvasProps) => {
     setMessages(prev => [...prev, userMsg])
     setInputText('')
 
+    const botId = idRef.current++;
+
+
     try {
-     
-    const canvasContext=editorController.getShapes();
-
-
+      const canvasContext = editorController.getShapes();
+      
       const response = await fetch('/api/draw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmed,
-       
-          canvasContext
-        })
-      })
+          canvasContext,
+        }),
+      });
 
-      const data: DrawingResponse = await response.json()
-      console.log('Draw API response:', data)
-      
-      const botMsg: DrawingMessage = {
-        id: idRef.current++,
-        text: data.reply || 'Drawing completed',
-        from: 'bot',
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, botMsg])
+      if (!response.body) throw new Error('No response body');
 
-      if (data.success && data.tldrawShapes?.length) {
-        const success = executeShapes(data.tldrawShapes, data.bindings)
-        if (!success) {
-          const errMsg: DrawingMessage = {
-            id: idRef.current++,
-            text: 'Failed to render shapes on canvas',
-            from: 'bot',
-            timestamp: new Date()
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      const statusMap: Record<string, string> = {
+        started: 'Request received...',
+        generating: 'Designing shapes...',
+        validating: 'Checking connections...',
+        rendering: 'Rendering final layout...',
+        completed: 'Finished drawing',
+        error: 'Generation error',
+      };
+
+      let finalReply = 'Drawing completed';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter((l) => l.trim());
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (!data) continue;
+
+            const displayMessage = data.reply || statusMap[data.status as string];
+            if (displayMessage) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === botId ? { ...m, text: displayMessage } : m)
+              );}
+
+            if (data.reply) finalReply = data.reply;
+            
+            if (data.status === 'rendering' && data.shapes) {
+              executeShapes(data.shapes, data.bindings);
+            }
+          } catch (e) {
+            console.error('Error parsing stream line:', e);
           }
-          setMessages(prev => [...prev, errMsg])
         }
-      } else if (data.success && !data.tldrawShapes?.length) {
-        console.log('Intent executed successfully:', data.stats)
-      } else if (!data.success) {
-        const errMsg: DrawingMessage = {
-          id: idRef.current++,
-          text: `Error: ${data.error || 'Unknown error'}`,
-          from: 'bot',
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, errMsg])
       }
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === botId ? { ...m, text: finalReply } : m))
+      );
+
     } catch (err) {
+      console.error('Stream error:', err);
       const errMsg: DrawingMessage = {
         id: idRef.current++,
         text: `Error: ${err instanceof Error ? err.message : String(err)}`,
         from: 'bot',
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errMsg])
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -267,13 +286,13 @@ const Canvas = ({editor}: CanvasProps) => {
               </div>
             </div>
           ))}
-          {isLoading && (
+          {/* {isLoading && (
             <div className="mb-3 flex flex-col items-start">
               <div className="bg-slate-100 text-slate-500 border border-slate-100 max-w-[80%] py-2 px-3 rounded-lg text-sm">
                 Processing your request...
               </div>
             </div>
-          )}
+          )} */}
         </div>
 
         <form onSubmit={handleSend} className="border-t border-slate-200 p-3 bg-white">

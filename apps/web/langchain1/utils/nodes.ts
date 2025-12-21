@@ -1,23 +1,26 @@
-
-
 import { getGeminiModel } from "../lib/gemini";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { PrimitiveOutputSchema } from "../lib/llm-prompt";
-import { validatePrimitives, type DiagramType } from "../lib/primitive-validator";
+import {
+  validatePrimitives,
+  type DiagramType,
+} from "../lib/primitive-validator";
 import { Primitive } from "../lib/primitives";
 import { renderPrimitives } from "../lib/renderer";
 import { AgentStateType } from "./states";
-import { RESPONSE_FORMAT_RULES,CORE_CONTENT_GENERATOR } from "../lib/llm-prompt";
-
-
+import {
+  RESPONSE_FORMAT_RULES,
+  CORE_CONTENT_GENERATOR,
+} from "../lib/llm-prompt";
 
 const model = getGeminiModel();
 
-
 const structuredModel = model.withStructuredOutput(PrimitiveOutputSchema);
 
-export async function corenode(state: AgentStateType): Promise<Partial<AgentStateType>> {
-  console.log(`[Generate] Attempt ${state.attempts + 1}`);
+export async function corenode(
+  state: AgentStateType
+): Promise<Partial<AgentStateType>> {
+  console.log(`[Generate] Starting generation, attempt ${state.attempts + 1}`);
 
   let promptText = state.userRequest;
 
@@ -39,13 +42,11 @@ Please fix these issues and regenerate.
 `;
   }
 
-  let MAIN_PROMPT=RESPONSE_FORMAT_RULES;
-   
+  let MAIN_PROMPT = RESPONSE_FORMAT_RULES;
 
-  if(state.attempts==0){
-    MAIN_PROMPT+=CORE_CONTENT_GENERATOR;
+  if (state.attempts == 0) {
+    MAIN_PROMPT += CORE_CONTENT_GENERATOR;
   }
-
 
   const messages = [
     new SystemMessage(MAIN_PROMPT),
@@ -61,6 +62,7 @@ Please fix these issues and regenerate.
         diagramtype: "freeform",
         attempts: state.attempts + 1,
         reply: "Failed to generate valid shapes. Please try again.",
+        status: "error",
       };
     }
 
@@ -69,19 +71,19 @@ Please fix these issues and regenerate.
       diagramtype: output.diagramType || "freeform",
       attempts: state.attempts + 1,
       reply: output.description || `Created ${output.items.length} shapes`,
+      status: "generating",
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-
-    const errorStack = error instanceof Error && error.stack ? error.stack : '';
-    console.error("[Generate] LLM Error:", errorMsg, errorStack);
-    const reply = `Error generating shapes. Please try a simpler request.\nDetails: ${errorMsg}`;
+    console.error("[Generate] LLM Error:", errorMsg);
+    const reply = `Error generating shapes. Please try a simpler request`;
 
     return {
       modeloutput: [],
       diagramtype: "freeform",
       attempts: state.attempts + 1,
       reply,
+      status: "error",
     };
   }
 }
@@ -89,7 +91,10 @@ Please fix these issues and regenerate.
 export function validateNode(state: AgentStateType): Partial<AgentStateType> {
   console.log(`[Validate] Checking ${state.modeloutput.length} primitives`);
 
-  const result = validatePrimitives(state.modeloutput as Primitive[], state.diagramtype as DiagramType);
+  const result = validatePrimitives(
+    state.modeloutput as Primitive[],
+    state.diagramtype as DiagramType
+  );
 
   if (result.errors.length > 0) {
     console.log(`Found ${result.errors.length} errors`);
@@ -99,21 +104,28 @@ export function validateNode(state: AgentStateType): Partial<AgentStateType> {
 
   return {
     validationerrors: result.errors,
+    status: "validating",
   };
 }
 
 export function renderNode(state: AgentStateType): Partial<AgentStateType> {
-  console.log(`[Render] Converting to TLDraw shapes`);
-
   const result = renderPrimitives(state.modeloutput as Primitive[]);
 
   return {
     shapes: result.shapes,
     bindings: result.bindings,
+    status: "rendering",
   };
 }
 
-export function shouldValidate(state: AgentStateType): "validate" | "render" {
+export function shouldValidate(
+  state: AgentStateType
+): "validate" | "render" | "__end__" {
+  if (state.status === "error") {
+    console.log(`[Route] Generation error, ending graph`);
+    return "__end__";
+  }
+
   if (state.diagramtype === "freeform") {
     console.log(`[Route] Skip validation for freeform`);
     return "render";
@@ -124,7 +136,7 @@ export function shouldValidate(state: AgentStateType): "validate" | "render" {
 }
 
 export function shouldRetry(state: AgentStateType): "generate" | "render" {
-  const maxAttempts = 3;
+  const maxAttempts = 2;
   if (state.validationerrors.length === 0) {
     return "render";
   }

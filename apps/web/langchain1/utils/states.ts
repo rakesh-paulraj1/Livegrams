@@ -22,6 +22,7 @@ export interface DrawingResult {
   bindings?: TLArrowBinding[];
   reply?: string;
   error?: string;
+  status?: string;
 }
 
 export const Agentstate = Annotation.Root({
@@ -54,6 +55,17 @@ export const Agentstate = Annotation.Root({
   reply: Annotation<string>({
     reducer: (_, update) => update,
     default: () => "",
+  }),
+  status: Annotation<
+    | "started"
+    | "generating"
+    | "validating"
+    | "rendering"
+    | "completed"
+    | "error"
+  >({
+    reducer: (_, update) => update,
+    default: () => "started",
   }),
 });
 

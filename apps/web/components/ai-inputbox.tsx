@@ -10,10 +10,15 @@ type ChatInputProps = {
   value?: string;
   onChange?: (v: string) => void;
   onSubmit?: () => void;
-    isOpen?: boolean;
+  isOpen?: boolean;
 };
 
-export default function AI_Input({ value: controlledValue, onChange, onSubmit, isOpen }: ChatInputProps) {
+export default function AI_Input({
+  value: controlledValue,
+  onChange,
+  onSubmit,
+  isOpen,
+}: ChatInputProps) {
         const [internalValue, setInternalValue] = useState("");
     const { textareaRef, adjustHeight } = useAutoResizeTextarea({
         minHeight: 52,
@@ -96,8 +101,7 @@ export default function AI_Input({ value: controlledValue, onChange, onSubmit, i
                         />
                     </div>
 
-                    <div className="h-12 bg-black/5  rounded-b-xl">
-                       
+                    <div className="h-12 bg-black/5  rounded-b-xl flex items-center px-4">
                         <div className="absolute right-3 bottom-3">
                             <button
                                 type="button"

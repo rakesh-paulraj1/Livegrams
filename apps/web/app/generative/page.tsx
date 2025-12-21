@@ -26,8 +26,6 @@ export default function App() {
 			animation: { duration: 5000 },
 		})
 	}
-
-
 	
 	
 	return (

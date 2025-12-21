@@ -1,15 +1,15 @@
-export type GeoShape = 
-  | "rectangle" 
-  | "ellipse" 
-  | "diamond" 
-  | "pentagon" 
-  | "hexagon" 
-  | "octagon" 
-  | "star" 
-  | "cloud" 
-  | "trapezoid" 
-  | "triangle" 
-  | "check-box" 
+export type GeoShape =
+  | "rectangle"
+  | "ellipse"
+  | "diamond"
+  | "pentagon"
+  | "hexagon"
+  | "octagon"
+  | "star"
+  | "cloud"
+  | "trapezoid"
+  | "triangle"
+  | "check-box"
   | "x-box"
   | "rhombus"
   | "arrow-right"
@@ -61,8 +61,10 @@ export interface TextPrimitive extends BasePrimitive {
 
 export interface ArrowPrimitive extends BasePrimitive {
   shape: "arrow";
-  start: Point;
-  end: Point;
+  start?: Point;
+  end?: Point;
+  fromLabel?: string;
+  toLabel?: string;
   arrowHeadType?: "arrow" | "triangle" | "dot" | "square";
   curved?: boolean;
 }
@@ -80,13 +82,13 @@ export interface PolygonPrimitive extends BasePrimitive {
   sides?: number;
 }
 
-export type Primitive = 
-  | RectanglePrimitive 
-  | EllipsePrimitive 
+export type Primitive =
+  | RectanglePrimitive
+  | EllipsePrimitive
   | GeoPrimitive
-  | TextPrimitive 
-  | ArrowPrimitive 
-  | LinePrimitive 
+  | TextPrimitive
+  | ArrowPrimitive
+  | LinePrimitive
   | PolygonPrimitive;
 
 export interface RenderRequest {
@@ -95,7 +97,6 @@ export interface RenderRequest {
   title?: string;
   description?: string;
 }
-
 
 export interface TLDrawShape {
   id: string;

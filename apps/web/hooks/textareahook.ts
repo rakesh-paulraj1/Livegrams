@@ -21,10 +21,8 @@ export function useAutoResizeTextarea({
                 return;
             }
 
-            // Temporarily shrink to get the right scrollHeight
             textarea.style.height = `${minHeight}px`;
 
-            // Calculate new height
             const newHeight = Math.max(
                 minHeight,
                 Math.min(
