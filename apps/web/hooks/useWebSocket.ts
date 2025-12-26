@@ -13,7 +13,6 @@ export function useWebSocket(roomId: number) {
       
       if (socket) {
         socketRef.current = socket;
-        
         socket.onopen = () => {
           console.log('WebSocket connected with session authentication');
         };
@@ -27,7 +26,6 @@ export function useWebSocket(roomId: number) {
         };
       }
     }
-
     return () => {
       if (socketRef.current) {
         socketRef.current.close();

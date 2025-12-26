@@ -1,32 +1,36 @@
-FROM node:20-slim AS builder
 
-WORKDIR /usr/src/app
+FROM node:20-alpine AS builder
+
+WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/typescript-config ./packages/typescript-config
 COPY apps/websocket ./apps/websocket
 
 RUN pnpm install --frozen-lockfile
-
 RUN pnpm run build:ws
 
 
-FROM node:20-slim AS runner
+FROM node:20-alpine AS runner
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV PORT=8081
 
-RUN apt-get update && apt-get install -y \
-    ca-certificates openssl \
-    && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-COPY --from=builder /usr/src/app/apps/websocket/dist ./apps/websocket/dist
-COPY --from=builder /usr/src/app/packages/typescript-config ./packages/typescript-config
-COPY package.json pnpm-workspace.yaml ./
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/websocket/package.json ./apps/websocket/package.json
+
+
+RUN pnpm install --prod --frozen-lockfile --filter=websocket... \
+    && pnpm prune --prod
+
+COPY --from=builder /app/apps/websocket/dist ./apps/websocket/dist
 
 EXPOSE 8081
 

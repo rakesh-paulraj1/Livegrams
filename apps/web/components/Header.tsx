@@ -88,7 +88,6 @@ export default function Header() {
                     <p className="text-sm font-medium text-gray-900">{session?.user?.name}</p>
                     <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
                   </div>
-                  {/* User's rooms list */}
                   <div className="px-4 py-2 border-b border-gray-100">
                     <p className="text-sm font-medium text-gray-900">Your rooms</p>
                     {roomsLoading ? (

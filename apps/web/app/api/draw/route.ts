@@ -16,7 +16,6 @@ export async function POST(request: NextRequest): Promise<Response> {
         { status: 400 }
       );
     }
-
     const stream = streamPrimitiveAgent({
       userRequest: message,
       canvasContext,
@@ -36,6 +35,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
       },
     });
+
 
     return new Response(readable, {
       headers: {
