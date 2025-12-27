@@ -36,7 +36,7 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no \
               -i ~/ssh_key \
-              root@57.159.28.23 << 'EOF'
+              azureuser@57.159.28.23 << 'EOF'
             docker stop ws_app || true
             docker rm ws_app || true
             docker pull rakeshpaulraj/ws:${{ github.sha }}
