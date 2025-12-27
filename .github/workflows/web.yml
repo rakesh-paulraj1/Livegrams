@@ -28,24 +28,10 @@ jobs:
           push: true
           tags: |
             rakeshpaulraj/web:${{ github.sha }}
-            
+
       - name: Deploy to server
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
           chmod 600 ~/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@57.159.28.23 << 'ENDSSH'
-            docker pull rakeshpaulraj/web:${{ github.sha }}
-            docker stop web_app 2>/dev/null || true
-            docker rm web_app 2>/dev/null || true
-            docker run -d --name web_app -p 3000:3000 \
-              -e NEXTAUTH_SECRET='${{ secrets.NEXTAUTH_SECRET }}' \
-              -e NEXTAUTH_URL='${{ secrets.NEXTAUTH_URL }}' \
-              -e GOOGLE_CLIENT_ID='${{ secrets.GOOGLE_CLIENT_ID }}' \
-              -e GOOGLE_CLIENT_SECRET='${{ secrets.GOOGLE_CLIENT_SECRET }}' \
-              -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
-              -e GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}' \
-              -e GOOGLE_API_KEY='${{ secrets.GOOGLE_API_KEY }}' \
-              -e WS_URL='ws://57.159.28.23:8081' \
-              -e NEXT_PUBLIC_WS_URL='ws://57.159.28.23:8081' \
-              rakeshpaulraj/web:${{ github.sha }}
-          ENDSSH
+          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@57.159.28.23 -t "docker pull rakeshpaulraj/web:${{ github.sha }} && docker stop web_app 2>/dev/null || true && docker rm web_app 2>/dev/null || true && docker run -d --name web_app -p 3000:3000 -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} -e NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} -e DATABASE_URL=${{ secrets.DATABASE_URL }} -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} rakeshpaulraj/web:${{ github.sha }}"
+          rm -f ~/ssh_key
