@@ -28,6 +28,20 @@ jobs:
           tags: |
             rakeshpaulraj/ws:${{ github.sha }}
       - name: Deploy to server
-        run: echo "${{secrets.SSH_PRIVATE_KEY}}" &> ~/ssh_key
-          chmod 700 /home/runner/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@57.159.28.23 -t "sudo docker stop ws_app && sudo docker rm ws_app && sudo docker run -d --name ws_app -p 8081:8081 -e JWT_SECRET=${{ secrets.JWT_SECRET }} rakeshpaulraj/ws:${{ github.sha }}"
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
+          chmod 600 ~/ssh_key
+
+          ssh -o StrictHostKeyChecking=no \
+              -i ~/ssh_key \
+              azureuser@57.159.28.23 \
+              "docker stop ws_app || true && \
+               docker rm ws_app || true && \
+               docker pull rakeshpaulraj/ws:${{ github.sha }} && \
+               docker run -d \
+                 --name ws_app \
+                 -p 8081:8081 \
+                 -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+                 rakeshpaulraj/ws:${{ github.sha }}"
+    
+          rm -f ~/ssh_key 
