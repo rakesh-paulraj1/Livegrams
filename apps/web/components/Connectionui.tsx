@@ -112,8 +112,8 @@ export default function ConnectionUI({
       >
         {isSaving ? 'Saving...' : saveStatus === 'success' ? '✓ Saved!' : saveStatus === 'error' ? '✗ Error' : '💾 Save'}
       </button>
-         <div className="fixed bottom-4 right-4 z-50 text-xs text-gray-500 bg-white/80 px-3 py-1 rounded shadow">
-              Created by <a href="https://tldraw.com" target="_blank" rel="noopener noreferrer" className="underline">tldraw</a>
+         <div className="fixed bottom-10 right-4 z-60 text-sm text-gray-500 bg-white/80 px-3 py-1 rounded shadow">
+              Created with <a href="https://tldraw.com" target="_blank" rel="noopener noreferrer" className="underline">tldraw</a>
             </div>
     </>
   );
