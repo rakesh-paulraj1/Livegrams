@@ -64,7 +64,7 @@ export function TldrawMultiplayer({ roomId,roomSlug}: TldrawMultiplayerProps) {
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <Tldraw store={storeWithStatus} options={options} >
+      <Tldraw licenseKey={"tldraw-2026-04-06/WyJGbk0taGVfNSIsWyIqIl0sMTYsIjIwMjYtMDQtMDYiXQ.dCGj13tRgD8vtF5/oDcJ47JqhS/hy/BRmHeD2+UL1YNjBW62oDLEBzN7iP7pNQAZmny/oikDgmiActZspZ58VA"} store={storeWithStatus} options={options} >
         <ConnectionUI 
           connectionStatus={connectionStatus}
           isSaving={isSaving}
