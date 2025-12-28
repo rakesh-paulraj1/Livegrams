@@ -56,7 +56,6 @@ export async function* streamPrimitiveAgent(request: DrawingRequest) {
     yield Object.values(update)[0];
   }
 
-  yield { status: "completed" };
 }
 
 export type { DrawingRequest, DrawingResult } from "./utils/states";

@@ -291,18 +291,47 @@ class PrimitiveRenderer {
   }> = [];
 
   private renderArrow(primitive: ArrowPrimitive): TLDrawShape {
-    const safeStart =
-      primitive.start &&
-      typeof primitive.start.x === "number" &&
-      typeof primitive.start.y === "number"
-        ? primitive.start
-        : { x: primitive.x || 0, y: primitive.y || 0 };
-    const safeEnd =
-      primitive.end &&
-      typeof primitive.end.x === "number" &&
-      typeof primitive.end.y === "number"
-        ? primitive.end
-        : { x: (safeStart.x || 0) + 100, y: safeStart.y || 0 };
+    // If arrow has labels, position it based on the connected shapes
+    let safeStart = { x: 0, y: 0 };
+    let safeEnd = { x: 100, y: 0 };
+
+    if (primitive.fromLabel && primitive.toLabel) {
+      // Get positions of labeled shapes
+      const fromShapeId = this.labelToShapeId.get(primitive.fromLabel.toLowerCase());
+      const toShapeId = this.labelToShapeId.get(primitive.toLabel.toLowerCase());
+      
+      const fromPos = fromShapeId ? this.shapePositions.get(fromShapeId) : null;
+      const toPos = toShapeId ? this.shapePositions.get(toShapeId) : null;
+
+      if (fromPos && toPos) {
+        // Position arrow from center-bottom of fromShape to center-top of toShape
+        safeStart = {
+          x: fromPos.x + fromPos.w / 2,
+          y: fromPos.y + fromPos.h,
+        };
+        safeEnd = {
+          x: toPos.x + toPos.w / 2,
+          y: toPos.y,
+        };
+      } else if (primitive.start && primitive.end) {
+        safeStart = primitive.start;
+        safeEnd = primitive.end;
+      } else {
+        safeStart = { x: primitive.x || 0, y: primitive.y || 0 };
+        safeEnd = { x: (primitive.x || 0) + 100, y: primitive.y || 0 };
+      }
+    } else if (primitive.start && primitive.end && 
+               typeof primitive.start.x === "number" &&
+               typeof primitive.start.y === "number" &&
+               typeof primitive.end.x === "number" &&
+               typeof primitive.end.y === "number") {
+      safeStart = primitive.start;
+      safeEnd = primitive.end;
+    } else {
+      safeStart = { x: primitive.x || 0, y: primitive.y || 0 };
+      safeEnd = { x: (primitive.x || 0) + 100, y: primitive.y || 0 };
+    }
+
     const arrowId = this.generateId("arrow");
     const startProp: Record<string, unknown> = { x: 0, y: 0 };
     const endProp: Record<string, unknown> = {

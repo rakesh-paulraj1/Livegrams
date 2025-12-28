@@ -20,7 +20,7 @@ const structuredModel = model.withStructuredOutput(PrimitiveOutputSchema);
 export async function corenode(
   state: AgentStateType
 ): Promise<Partial<AgentStateType>> {
-  console.log(`[Generate] Starting generation, attempt ${state.attempts + 1}`);
+  console.log(` Starting generation, attempt ${state.attempts + 1}`);
 
   let promptText = state.userRequest;
 
@@ -75,7 +75,7 @@ Please fix these issues and regenerate.
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("[Generate] LLM Error:", errorMsg);
+    console.error(" LLM Error:", errorMsg);
     const reply = `Error generating shapes. Please try a simpler request`;
 
     return {
@@ -122,16 +122,16 @@ export function shouldValidate(
   state: AgentStateType
 ): "validate" | "render" | "__end__" {
   if (state.status === "error") {
-    console.log(`[Route] Generation error, ending graph`);
+    console.log(`Generation error, ending graph`);
     return "__end__";
   }
 
   if (state.diagramtype === "freeform") {
-    console.log(`[Route] Skip validation for freeform`);
+    console.log(` Skip validation for freeform`);
     return "render";
   }
 
-  console.log(`[Route] Validating structured diagram`);
+  console.log(`Validating structured diagram`);
   return "validate";
 }
 

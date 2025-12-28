@@ -37,7 +37,7 @@ export function useAutoResizeTextarea({
     );
 
     useEffect(() => {
-        // Set initial height
+  
         const textarea = textareaRef.current;
         if (textarea) {
             textarea.style.height = `${minHeight}px`;

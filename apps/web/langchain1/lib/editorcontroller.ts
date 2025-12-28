@@ -103,15 +103,11 @@ export class EditorController {
 
   async getCanvasImage(): Promise<string> {
     const editor = this.getEditor();
-
     const shapes = editor.getCurrentPageShapes();
-    
     if (shapes.length === 0) {
       throw new Error('No shapes on canvas to capture');
     }
-  
     const shapeIds = shapes.map((s: any) => s.id);
-    
     const result = await editor.toImageDataUrl(shapeIds, {
       format: 'png', 
       background: true,

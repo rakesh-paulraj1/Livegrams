@@ -159,10 +159,18 @@ PRIMITIVE SHAPES YOU CAN USE:
 LAYOUT GUIDELINES:
 1. DICTIONARY/VERTICAL FLOW: For process diagrams, use vertical flow (Start at top, End at bottom) for better readability.
 2. SIZING: For shapes with labels, the system will auto-size the box to fit the text. You don't need to provide exact w/h, but ensure shapes are spaced out (at least 150px vertical gap between centers).
-3. ARROW LINKING: ALWAYS prefer fromLabel and toLabel for arrows in diagrams. This ensures arrows move with shapes.
-4. LABELING: NEVER use a separate "text" shape to label a rectangle, ellipse, or diamond. ALWAYS use the "label" property of the shape itself.
+3. ARROW LINKING: ALWAYS prefer fromLabel and toLabel for arrows in diagrams. This ensures arrows move with shapes and connect properly. NEVER use coordinates (start/end) for flowchart arrows.
+4. LABELING RULES:
+   - ALWAYS include a "label" property for ALL flowchart shapes (rectangles, diamonds, ellipses, etc.)
+   - NEVER leave labels empty or missing in flowcharts/diagrams
+   - NEVER use a separate "text" shape to label a rectangle, ellipse, or diamond
+   - ALWAYS use the "label" property of the shape itself
+   - Only use "text" shapes for standalone titles or floating notes
+5. ARROW LABELS: When arrows need text (like "Yes"/"No" on decision branches), use the "label" property of the arrow primitive itself
 
 RETURN A END-USER DESCRIPTION OF YOUR DRAWING
+
+Respond only with valid JSON. Do not include any extra text, comments, or explanations.
 `;
 
 export const RESPONSE_FORMAT_RULES = `YOUR RESPONSE FORMAT:
@@ -182,8 +190,13 @@ RULES:
 1. Always break complex objects into primitives (no "bus" or "server" as single shapes)
 2. Use appropriate native shapes: stars for stars, diamonds for decisions, clouds for cloud services
 3. Use rectangles and circles as building blocks for other elements
-4. Use arrows to show connections and flow (REQUIRED for flowcharts).
-5. LABELING: NEVER use a separate "text" shape to label a rectangle, ellipse, diamond, or other geo shape. ALWAYS use the "label" property of the shape itself. Only use "text" shapes for standalone titles or floating notes.
+4. Use arrows to show connections and flow (REQUIRED for flowcharts). Use fromLabel/toLabel for arrow connections, NOT start/end coordinates.
+5. LABELING (CRITICAL): 
+   - ALWAYS include "label" property for ALL flowchart shapes (ellipse, rectangle, diamond, etc.)
+   - NEVER leave labels empty or undefined in structured diagrams
+   - NEVER use a separate "text" shape to label a rectangle, ellipse, diamond, or other geo shape
+   - ALWAYS use the "label" property of the shape itself
+   - Only use "text" shapes for standalone titles or floating notes
 6. Position items reasonably (avoid overlaps).
 7. Include a label for each main component.
 8. Keep coordinates within a reasonable canvas size (0-1000 for x and y).
@@ -252,7 +265,11 @@ Examples:
 - "login process diagram" → diagramType: "structured"
 - "draw a house" → diagramType: "freeform"
 
-Now, break down the user's request into primitives.`;
+Now, break down the user's request into primitives.
+
+Respond only with valid JSON. Do not include any extra text, comments, or explanations.
+
+`;
 
 import { z } from "zod";
 

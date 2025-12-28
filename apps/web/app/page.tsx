@@ -149,46 +149,51 @@ export default function App() {
 
       <div className="min-h-screen bg-white">
         {isDialogOpen && (
-          <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Choose Your Action</h2>
-                <button
-                  onClick={() => setIsDialogOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex gap-3 items-center">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBoardType("interactive")}
-                      className={`px-4 py-2 rounded-md border border-gray-300 text-gray-800 ${
-                        selectedBoardType === "interactive" ? "bg-gray-200" : "bg-white"
-                      }`}
-                    >
-                      Interactive Board
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBoardType("ai")}
-                      className={`px-4 py-2 rounded-md border border-gray-300 text-gray-800 ${
-                        selectedBoardType === "ai" ? "bg-gray-200" : "bg-white"
-                      }`}
-                    >
-                      AI Whiteboard
-                    </button>
-                  </div>
+          <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-start md:items-center justify-center z-50 p-4 pt-16 md:pt-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden">
+              <div className="p-6 pb-0 flex-shrink-0">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Choose Your Action</h2>
+                  <button
+                    onClick={() => setIsDialogOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
                 </div>
 
-                <p className="text-sm text-gray-600">
-                  Choose a board type. Select &quot;Interactive Board&quot; to create or join a collaborative session, or
-                  &quot;AI Whiteboard&quot; to use an AI powered whiteboard.
-                </p>
+                <div className="space-y-4">
+                  <div className="flex gap-3 items-center">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBoardType("interactive")}
+                        className={`px-4 py-2 rounded-md border border-gray-300 text-gray-800 ${
+                          selectedBoardType === "interactive" ? "bg-gray-200" : "bg-white"
+                        }`}
+                      >
+                        Interactive Board
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBoardType("ai")}
+                        className={`px-4 py-2 rounded-md border border-gray-300 text-gray-800 ${
+                          selectedBoardType === "ai" ? "bg-gray-200" : "bg-white"
+                        }`}
+                      >
+                        AI Whiteboard
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-600">
+                    Choose a board type. Select &quot;Interactive Board&quot; to create or join a collaborative session, or
+                    &quot;AI Whiteboard&quot; to use an AI powered whiteboard.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 pt-4 overflow-y-auto flex-1">
 
                 {selectedBoardType === "interactive" ? (
                   <div className="space-y-4">

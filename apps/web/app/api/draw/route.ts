@@ -36,6 +36,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       },
     });
 
+    console.log("streamable response "+readable);
 
     return new Response(readable, {
       headers: {

@@ -81,6 +81,8 @@ const Canvas = ({editor}: CanvasProps) => {
     }
 
     try {
+      editorController.deleteAll();
+
       const shapesToCreate = shapes.map(s => ({
         id: s.id.startsWith('shape:') ? s.id : `shape:${s.id}`,
         typeName: s.typeName || 'shape',
@@ -143,6 +145,14 @@ const Canvas = ({editor}: CanvasProps) => {
 
     const botId = idRef.current++;
 
+    const botMsg: DrawingMessage = {
+      id: botId,
+      text: '...',
+      from: 'bot',
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, botMsg])
+
 
     try {
       const canvasContext = editorController.getShapes();
@@ -164,13 +174,14 @@ const Canvas = ({editor}: CanvasProps) => {
       const statusMap: Record<string, string> = {
         started: 'Request received...',
         generating: 'Designing shapes...',
-        validating: 'Checking connections...',
+        validating: 'Checking connections between shapes...',
         rendering: 'Rendering final layout...',
         completed: 'Finished drawing',
         error: 'Generation error',
       };
 
-      let finalReply = 'Drawing completed';
+      let bestReply = '';
+      let hasError = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -182,29 +193,47 @@ const Canvas = ({editor}: CanvasProps) => {
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
+            console.log(data.status);
             if (!data) continue;
+            if (data.reply && data.reply.length > bestReply.length) {
+              bestReply = data.reply;
+            }
 
-            const displayMessage = data.reply || statusMap[data.status as string];
-            if (displayMessage) {
+            const statusText = statusMap[data.status as string];
+            let textToShow = statusText;
+            
+            if (data.status === 'error') {
+              
+              hasError = true;
+              textToShow = data.error || data.reply || "An error occurred please Reload the page";
+              break; 
+            } else if (data.status === 'rendering' || data.status === 'completed') {
+              textToShow = bestReply || "Drawing completed";
+            }
+
+            if (textToShow) {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === botId ? { ...m, text: displayMessage } : m)
-              );}
-
-            if (data.reply) finalReply = data.reply;
+                  m.id === botId ? { ...m, text: textToShow } : m)
+              );
+            }
             
             if (data.status === 'rendering' && data.shapes) {
+              
               executeShapes(data.shapes, data.bindings);
             }
           } catch (e) {
             console.error('Error parsing stream line:', e);
           }
         }
+      if(hasError) break;
       }
 
-      setMessages((prev) =>
-        prev.map((m) => (m.id === botId ? { ...m, text: finalReply } : m))
-      );
+      if (!hasError) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === botId ? { ...m, text: bestReply || 'Drawing completed' } : m))
+        );
+      }
 
     } catch (err) {
       console.error('Stream error:', err);
@@ -247,7 +276,7 @@ const Canvas = ({editor}: CanvasProps) => {
 
       <aside className={cn(
         'w-full lg:w-[380px] border-l-2 border-slate-200 flex flex-col bg-white text-slate-800 shadow-sm',
-        'fixed lg:relative inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out',
+        'fixed lg:relative h-[100dvh] top-0 right-0 z-40 transform transition-transform duration-300 ease-in-out',
         isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
       )}>
         <button
@@ -286,13 +315,6 @@ const Canvas = ({editor}: CanvasProps) => {
               </div>
             </div>
           ))}
-          {/* {isLoading && (
-            <div className="mb-3 flex flex-col items-start">
-              <div className="bg-slate-100 text-slate-500 border border-slate-100 max-w-[80%] py-2 px-3 rounded-lg text-sm">
-                Processing your request...
-              </div>
-            </div>
-          )} */}
         </div>
 
         <form onSubmit={handleSend} className="border-t border-slate-200 p-3 bg-white">
