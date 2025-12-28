@@ -29,6 +29,18 @@ jobs:
           tags: |
             rakeshpaulraj/web:${{ github.sha }}
       - name: Deploy to server
-        run: echo "${{secrets.SSH_PRIVATE_KEY}}" &> ~/ssh_key
-          chmod 700 /home/runner/ssh_key
-          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@57.159.28.23 -t "sudo docker stop web_app && sudo docker rm web_app && sudo docker run -d --name web_app -p 3000:3000 -e JWT_SECRET=${{ secrets.JWT_SECRET }} -e NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} -e NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} -e DATABASE_URL=${{ secrets.DATABASE_URL }} -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} rakeshpaulraj/web:${{ github.sha }}"
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/ssh_key
+          chmod 700 ~/ssh_key
+          ssh -o StrictHostKeyChecking=no -i ~/ssh_key root@57.159.28.23 -t "
+            sudo docker stop web_app || true
+            sudo docker rm web_app || true
+            sudo docker run -d --name web_app -p 3000:3000 \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
+              -e NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} \
+              -e GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
+              -e GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
+              rakeshpaulraj/web:${{ github.sha }}"
