@@ -149,8 +149,12 @@ export default function App() {
 
       <div className="min-h-screen bg-white">
         {isDialogOpen && (
-          <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-start md:items-center justify-center z-50 p-4 pt-16 md:pt-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden">
+          <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-start md:items-center justify-center z-50 p-0 md:p-4 pt-16 md:pt-4 overflow-y-auto md:overflow-visible" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden md:my-0 my-4" style={{
+            
+              marginTop: 'env(safe-area-inset-top, 1rem)',
+              marginBottom: 'env(safe-area-inset-bottom, 1rem)'
+            }}>
               <div className="p-6 pb-0 flex-shrink-0">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">Choose Your Action</h2>
