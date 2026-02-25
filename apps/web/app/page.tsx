@@ -40,6 +40,16 @@ export default function App() {
     }
   }, [isDialogOpen]);
 
+useEffect(() => {
+  const handler = (e: PromiseRejectionEvent) => {
+    if (e.reason?.name === "ChunkLoadError") {
+      window.location.reload();
+    }
+  };
+  window.addEventListener("unhandledrejection", handler);
+  return () => window.removeEventListener("unhandledrejection", handler);
+}, []);
+
   useEffect(() => {
     if (!isDialogOpen) return
     const email = session?.user?.email
@@ -132,7 +142,12 @@ export default function App() {
         <Toast
           message={toast.message}
           type={toast.type}
-          onClose={() => setToast(null)}
+          onClose={() => {
+            if (toast.type === "success" && toast.message.includes("Redirecting")) {
+              return;
+            }
+            setToast(null);
+          }}
         />
       )}
       <div
